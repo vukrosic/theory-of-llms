@@ -20,3 +20,6 @@ Result (loss / peak score), seeds 0 | 1:
 - On copy-only data the benefit comes entirely from the key norm: k-only ≥ both, q-only = none (2 seeds).
 - Prediction wrong: one side alone is almost as good as both, not halfway.
 3-seed means at lr 0.113: none 4.358, q-only 4.161 (4.175/4.121/4.186), k-only 4.132 (4.127/4.117/4.152), both 4.122. Either side alone recovers 83-96% of the gap.
+
+## Query-only norm for MLA (dropped before running, 2026-10-23)
+Literature: QUEST (2604.00199, ICLR 2026) already studies key-only norm; QK-Normed MLA (2606.16310) makes full QK-norm work in MLA with <2% decode overhead, so a q-only workaround is not needed. Dropped.
