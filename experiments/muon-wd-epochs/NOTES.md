@@ -32,3 +32,8 @@ Fit for E>=8: best wd ∝ E^1.5 (E^1.2 to E^1.75 between neighbours; 3-point par
 
 **Conclusion:** with Muon, best weight decay rises about as E^1.5 (0.1 at <=4 epochs, ~1 at 8, ~3 at 16, ~8 at 32, ~20 at 64), and keeping 0.1 at 32-64 epochs loses 0.7-4+ nats of held-out loss.
 Caveats: one toy (D=16, 800 steps, task mix, 1-2 seeds), wd normalized as p *= 1 - lr*f*wd; absolute values depend on this scaling, only the E-dependence transfers.
+
+## Width 32 check (2026-10-23, WDALL=1, seed 0, runs_d32.jsonl)
+Reason: 2503.07879 suggests wd ∝ √epochs on a 12.6B model; here E^1.5. If the exponent falls with width, the page must say so.
+Prediction: best wd at D=32 same grid point as D=16 (0.1 / 3 / 10 at E=4/16/32), exponent stays >1.
+Result: best wd 0.3 / 3 / 10 at E=4/16/32 (D=16: 0.1 / 3 / 10). Exponent stays >1 (E^1.7 between 16 and 32 at both widths). Wider model already wants more wd at E=4, and keeping 0.1 at E=16 costs 2.3 at D=32 vs 0.57 at D=16. Prediction mostly right (E=4 point moved up one grid step).

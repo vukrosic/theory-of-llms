@@ -10,6 +10,8 @@ When a lab runs out of fresh text, it trains on the same data several times (sev
 
 Keeping 0.1 costs 0.05 loss at 8 epochs, 0.57 at 16, and 2.7 at 32.
 
+A model twice as wide gives the same best values at 16 and 32 epochs (3 and 10) and already wants 0.3 at 4 epochs; there, keeping 0.1 at 16 epochs costs 2.3 instead of 0.57.
+
 ![Left: loss vs weight decay for each number of epochs. Right: best loss vs epochs, with and without decay on embedding and head](../figures/muon-wd-epochs.png)
 
 2. Decay the embedding and the output head too, not only the Muon matrices. If only the Muon matrices are decayed, the embedding and head memorize the repeated data: at the best weight decay the loss is 0.20 worse at 16 epochs and 1.0 worse at 32.
@@ -40,6 +42,8 @@ Held-out loss, weight decay on all weights, mean of seeds 0 and 1 (seed 0 only f
 | 64 | 17.63 | 16.08 | 13.31 | 9.975 | 7.428 | 5.613 | 4.637 | **4.610** |
 
 Weight decay on Muon matrices only, seed 0, best value: 4.007 / 4.065 / 4.195 / 4.448 / 5.391 / 8.034 at 1 / 4 / 8 / 16 / 32 / 64 epochs.
+
+Width 32, seed 0, held-out loss: 4 epochs 4.013 / 3.976 / **3.942** / 3.983 / 4.087 at weight decay 0.03 / 0.1 / 0.3 / 1 / 3; 16 epochs 6.452 / 5.269 / 4.335 / **4.142** / 4.210 at 0.1 / 0.3 / 1 / 3 / 10; 32 epochs 6.060 / 4.695 / **4.309** / 4.447 at 1 / 3 / 10 / 30.
 
 At learning rate 0.028 (seed 0) the best weight decay was 1-3 at 16 epochs and 10-30 at 64, the same as at 0.014.
 
