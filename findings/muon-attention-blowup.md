@@ -18,13 +18,15 @@ At learning rate 0.028 the largest score is 12; at 0.04 it is 48; at 0.057 it is
 
 4. QK-Clip (Kimi K2's fix: shrink a head's queries and keys whenever its largest score passes a threshold) works only if the threshold is tight. With threshold 100 the loss at 8× the best learning rate is still 0.20 worse than QK-norm. With threshold 5, about half the largest score at the best learning rate, it matches QK-norm (4.071 vs 4.099; second seed 4.088 vs 4.137) and costs nothing at the best learning rate.
 
+5. Two other fixes don't replace QK-norm. Capping the scores inside the softmax (Gemma 2's soft-capping at 30) halves the damage at 8× the best learning rate (4.221 vs 4.428, QK-norm 4.099), and a tighter cap of 5 is worse (4.264), because the raw scores still grow to about 4,000 underneath. An output gate on attention (Qwen's gated attention) does nothing (4.432); the scores still reach 5,700.
+
 How to use this
 
-If you train with Muon and without QK-norm, keep the learning rate below about 2× your best one, and lower it more if you raise momentum or depth. If you use QK-Clip, set the threshold from the attention scores you see in a healthy run (around the largest score at the best learning rate), not a fixed 100.
+If you train with Muon and without QK-norm, keep the learning rate below about 2× your best one, and lower it more if you raise momentum or depth. Soft-capping and gating are not substitutes. If you use QK-Clip, set the threshold from the attention scores you see in a healthy run (around the largest score at the best learning rate), not a fixed 100.
 
 What is new and what is not
 
-Attention scores blowing up at high learning rates was shown for other optimizers by Wortsman et al. 2023, and for Muon at large scale by Kimi K2, which introduced QK-Clip. I found no paper that measures where the Muon threshold sits relative to the best learning rate, how momentum, depth and weight decay move it, or how the QK-Clip threshold changes the result above it.
+Attention scores blowing up at high learning rates was shown for other optimizers by Wortsman et al. 2023, and for Muon at large scale by Kimi K2, which introduced QK-Clip and reported that soft-capping was not enough. I found no paper that measures where the Muon threshold sits relative to the best learning rate, how momentum, depth and weight decay move it, or how the QK-Clip threshold changes the result above it.
 
 This is a tiny model with 4-dimensional heads, so the numbers (10, 5, 100) only make sense relative to each other. In Kimi K2 the scores grew at the normal learning rate during a very long run; these short runs only blow up above it.
 
@@ -62,5 +64,8 @@ QK-Clip, final loss / largest score, no QK-norm, seed 0:
 | 10 | 4.002 / 9.8 | 4.064 / 15 | 4.157 / 24 |
 | 5 | 4.004 / 6.3 | 4.059 / 8.2 | 4.071 / 14 |
 | QK-norm instead | 4.017 / 3.6 | 4.073 / 3.3 | 4.099 / 6.2 |
+| soft-cap 30 instead (score shown before the cap) | 4.003 / 9.8 | 4.065 / 690 | 4.221 / 4096 |
+| soft-cap 5 instead | 4.005 / 9.4 | | 4.264 / 4149 |
+| output gate instead | 4.015 / 25 | 4.105 / 599 | 4.432 / 5669 |
 
-Setup: 2-layer model, width 16, 4 heads, batch 8, sequence length 32, RoPE, SwiGLU, RMSNorm, Muon with momentum 0.95 (Nesterov), no weight decay unless stated, 20 warmup steps, learning rate decayed to zero over the last half, 800 steps on a mix of 20 toy tasks. Attention score = largest q·k/√d on a fixed batch, checked every 50 steps. QK-Clip here rescales a head's query and key weights by √(threshold / score) after each step, on all dimensions (Kimi K2 treats the shared RoPE part of MLA separately). One seed per point unless stated; loss noise between seeds is about 0.01-0.02. Each run takes about 2.5 s on a laptop CPU. Code: [experiments/muon-attention-logits](../experiments/muon-attention-logits/) (`QKNORM=0 python3 attn.py 0.014,0.057 0`) and [experiments/muon-qkclip](../experiments/muon-qkclip/) (`QKNORM=0 QKCLIP=5 python3 attn.py 0.113 0`).
+Setup: 2-layer model, width 16, 4 heads, batch 8, sequence length 32, RoPE, SwiGLU, RMSNorm, Muon with momentum 0.95 (Nesterov), no weight decay unless stated, 20 warmup steps, learning rate decayed to zero over the last half, 800 steps on a mix of 20 toy tasks. Attention score = largest q·k/√d on a fixed batch, checked every 50 steps. QK-Clip here rescales a head's query and key weights by √(threshold / score) after each step, on all dimensions (Kimi K2 treats the shared RoPE part of MLA separately). One seed per point unless stated; loss noise between seeds is about 0.01-0.02. Each run takes about 2.5 s on a laptop CPU. Code: [experiments/muon-attention-logits](../experiments/muon-attention-logits/) (`QKNORM=0 python3 attn.py 0.014,0.057 0`) [experiments/muon-qkclip](../experiments/muon-qkclip/) (`QKNORM=0 QKCLIP=5 python3 attn.py 0.113 0`) and [experiments/muon-attn-fixes](../experiments/muon-attn-fixes/) (`QKNORM=0 SOFTCAP=30 python3 attn.py 0.113 0`, `GATE=1` for the gate).
