@@ -20,6 +20,8 @@ COPYW = env("COPYW", 0.5)                          # share of copy sequences
 ADAM_LR, EMB_MULT = env("ADAM_LR", 0.01), env("EMB_MULT", 8.0)
 DENSE0 = env("DENSE0", 0)                          # first DENSE0 layers dense (DeepSeek first_k_dense_replace)
 MUON_EXP = os.environ.get("MUON_EXP", "each")       # each: orthogonalize every expert's matrix alone; stack: one orthogonalization of all experts side by side
+QKNORM = env("QKNORM", 1)                          # 0: no QK-norm (MLA-style); peak attention score is tracked
+SCALE = os.environ.get("SCALE", "keller")          # Muon step scale per matrix: keller max(1,r/c)^.5 | none | spectral (r/c)^.5 | moon 0.2*sqrt(max(r,c))
 ROUTER_MUON = env("ROUTER_MUON", 0)                # 1: router weight on Muon (as a plain 2D matrix) instead of Adam
 LOADPOW = env("LOADPOW", 0.0)                      # per-expert Muon step x (expert's token share / fair share)^LOADPOW; 0 = off
 ROUTE = os.environ.get("ROUTE", "h")               # router input: h (normal: after attention), x0 (token embedding)
@@ -88,6 +90,9 @@ class MoE(nn.Module):
         return (y * g.T[:, :, None]).sum(0).view(b, t, D)
 
 
+TRACK = [False, []]
+
+
 class Block(nn.Module):
     def __init__(s, moe):
         super().__init__(); L = lambda i, o: nn.Linear(i, o, bias=False)
@@ -98,7 +103,12 @@ class Block(nn.Module):
         else: s.gate, s.up, s.down = L(D, FF), L(D, FF), L(FF, D)
     def forward(s, x, x0):
         b, t, _ = x.shape; h = s.n1(x); sp = lambda z: z.view(b, t, H, D // H).transpose(1, 2)
-        a = F.scaled_dot_product_attention(rope(s.qn(sp(s.q(h)))), rope(s.kn(sp(s.k(h)))), sp(s.v(h)), is_causal=True)
+        q, k = sp(s.q(h)), sp(s.k(h))
+        if QKNORM: q, k = s.qn(q), s.kn(k)
+        q, k = rope(q), rope(k)
+        if TRACK[0]:
+            sc_ = (q @ k.transpose(-1, -2)) / (D // H) ** 0.5; TRACK[1].append(sc_.masked_fill(~torch.ones(t, t, dtype=torch.bool).tril(), -1e9).amax().item())
+        a = F.scaled_dot_product_attention(q, k, sp(s.v(h)), is_causal=True)
         x = x + s.o(a.transpose(1, 2).reshape(b, t, D)); h = s.n2(x)
         if s.is_moe: return x + s.moe(h, h if ROUTE == "h" else x0)       # x0 / both: router (also) reads the token embedding
         return x + s.down(F.silu(s.gate(h)) * s.up(h))
@@ -144,7 +154,7 @@ def train(lr, seed):
     buf = [torch.zeros_like(p) for p in mats]; e1 = [torch.zeros_like(p) for p in rest]; e2 = [torch.zeros_like(p) for p in rest]
     for i in range(STEPS):
         f = min(1.0, (i + 1) / WARM) * min(1.0, 2 * (1 - i / STEPS))
-        x, msk, _ = gen(B, g); lo = m(x[:, :-1]); loss = F.cross_entropy(lo[msk], x[:, 1:][msk])
+        x, msk, _ = gen(B, g); TRACK[0] = i % 25 == 0; lo = m(x[:, :-1]); TRACK[0] = False; loss = F.cross_entropy(lo[msk], x[:, 1:][msk])
         m.zero_grad(set_to_none=True); loss.backward()
         with torch.no_grad():
             ls = {}
@@ -163,20 +173,24 @@ def train(lr, seed):
                     e, o_, i_ = u.shape; u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5
                 elif p.ndim == 3 and MUON_EXP == "flat":                     # g.view(g.size(0), -1): each expert one row (Moonlight example code)
                     e, o_, i_ = u.shape; u = ns(u.reshape(e, o_ * i_)).view(e, o_, i_); sc = 1.0
-                else: u = ns(u); sc = max(1, p.shape[-2] / p.shape[-1]) ** 0.5
+                else:
+                    u = ns(u); r_, c_ = p.shape[-2], p.shape[-1]
+                    sc = {"keller": max(1, r_ / c_) ** 0.5, "none": 1.0, "spectral": (r_ / c_) ** 0.5, "moon": 0.2 * max(r_, c_) ** 0.5}[SCALE]
                 if id(p) in ls: u = u * ls[id(p)]
                 p.add_(u, alpha=-lr * f * mult[id(p)] * sc)
             for p, a, b2 in zip(rest, e1, e2):
+                if p.grad is None: continue                           # unused QK-norm weights when QKNORM=0
                 a.mul_(0.9).add_(p.grad, alpha=0.1); b2.mul_(0.95).add_(p.grad ** 2, alpha=0.05)
                 p.add_(a / (1 - 0.9 ** (i + 1)) / ((b2 / (1 - 0.95 ** (i + 1))).sqrt() + 1e-8), alpha=-ADAM_LR * f * mult[id(p)])
+    tr = TRACK[1]; m.peak = [round(max(tr[l::NL]), 1) for l in range(NL)]   # peak largest attention score per layer
     return m
 
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "GENERIC", "LOADPOW", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "GENERIC", "LOADPOW", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
-    row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), **ev)
+    row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")
     print(" ".join(f"{k}={v}" for k, v in cfg.items() if k in ("moe", "k", "d", "nl", "steps", "ns", "dense0", "muon_exp", "route", "exp_mult", "att_mult")), f"lr {lr} seed {seed}:",
-          " ".join(f"{k} {v}" for k, v in ev.items()), f"({row['sec']}s)", flush=True)
+          " ".join(f"{k} {v}" for k, v in ev.items()), f"peak {m.peak} ({row['sec']}s)", flush=True)
