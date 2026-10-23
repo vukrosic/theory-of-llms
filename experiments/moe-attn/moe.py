@@ -171,8 +171,10 @@ def train(lr, seed):
                     e, o_, i_ = u.shape
                     if o_ > i_: u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5      # gate/up: experts stacked by rows
                     else: u = ns(u.permute(1, 0, 2).reshape(o_, e * i_)).view(o_, e, i_).permute(1, 0, 2); sc = 1.0   # down: side by side
-                elif p.ndim == 3 and MUON_EXP == "fused":                    # fused 2D storage [E*rows, cols] treated as one plain matrix
+                elif p.ndim == 3 and MUON_EXP in ("fused", "fusednorm"):     # fused 2D storage [E*rows, cols] treated as one plain matrix
                     e, o_, i_ = u.shape; u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5
+                    if MUON_EXP == "fusednorm":                              # same directions, but each expert's block rescaled to a per-expert Muon step's size
+                        u = u / (u.norm(dim=(1, 2), keepdim=True) + 1e-7) * min(o_, i_) ** 0.5; sc = max(1, o_ / i_) ** 0.5
                 elif p.ndim == 3 and MUON_EXP == "flat":                     # g.view(g.size(0), -1): each expert one row (Moonlight example code)
                     e, o_, i_ = u.shape; u = ns(u.reshape(e, o_ * i_)).view(e, o_, i_); sc = 1.0
                 else:

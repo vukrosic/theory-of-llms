@@ -28,3 +28,4 @@ Result (2 seeds, lr 0.02-0.08): blow-up lr identical. Layer-1 peak score dense/M
 A lab researcher who reads this would change: how hard they compress KV (GQA groups / MLA rank) in an MoE vs a dense model.
 Prediction: KVH=1 hurts MoE more than dense on facts (attention must deliver the subject that routing + experts use).
 Result: dense-MoE facts gap KVH4 0.53, KVH2 0.67, KVH1 0.36 (2 seeds); both lose about equally, noisy. No interaction. Dropped. (Note: code edits change float order -> same seed can move 0.2-0.3 on dense; compare within one code version.)
+- fusednorm (fused directions, each expert block rescaled to per-expert step size) x0.5: 1.24/1.34 ~ fused 1.28 -> directions, not step sizes. Added to finding.
