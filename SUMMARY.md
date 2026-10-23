@@ -20,3 +20,4 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [Without QK-norm, attention scores blow up above a learning rate threshold](findings/muon-attention-blowup.md)
 - [When Muon needs QK-Clip, and how to set it](findings/muon-qkclip-rules.md)
 - [Repeating data with Muon needs much higher weight decay](findings/muon-weight-decay-epochs.md)
+- [With Muon, orthogonalize each MoE expert alone](findings/muon-moe-expert-layout.md)

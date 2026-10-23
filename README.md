@@ -19,6 +19,7 @@ What do small language models actually build inside when they learn? We open up 
 | Without QK-norm, Muon's attention scores blow up above about 3x the best learning rate | largest score 12 at lr 0.028, 653 at 0.057; QK-Clip at threshold 100 doesn't stop the damage at 8x the best lr, a threshold near healthy scores does | [muon-attention-blowup](findings/muon-attention-blowup.md) |
 | When Muon needs QK-Clip, and how to set it | not needed at the normal lr even in long runs; threshold 100 is enough up to 4x the best lr; check every 10 steps; keep it on while lr is high; weight decay 0.3 on only W_q, W_k does the same job | [muon-qkclip-rules](findings/muon-qkclip-rules.md) |
 | Repeating data with Muon needs much higher weight decay, on embedding and head too | best weight decay 0.1 at 4 epochs, 3 at 16, 10 at 32; keeping 0.1 at 16 epochs costs 0.57 loss | [muon-weight-decay-epochs](findings/muon-weight-decay-epochs.md) |
+| With Muon, orthogonalize each MoE expert alone | experts treated as one fused matrix: 66% facts right vs 82% per expert, close to a dense model (63%) | [muon-moe-expert-layout](findings/muon-moe-expert-layout.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 
