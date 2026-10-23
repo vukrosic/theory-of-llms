@@ -12,6 +12,8 @@ Expert weights are often stored as one tensor (8 experts × out × in, or fused 
 | flattened: each expert one row (`g.view(g.size(0), -1)`) | 61% | 1.592 |
 | dense MLP, same active size (no experts) | 63% | 1.564 |
 
+![Left: facts answered right for each Muon expert layout. Right: each expert alone vs fused vs dense for 8, 16 and 32 experts and 4x more tokens per expert](../figures/muon-moe-expert-layout.png)
+
 2. The gap grows with more experts. With 16 experts: 89% right on its own (loss 0.517), 69% fused (1.30). With 32 narrow experts, top-8, each expert's hidden size (11) smaller than the model width (32) as in DeepSeek-V3 and Kimi K2: 83% on its own (0.79), 65% fused (1.42 at its best expert learning rate).
 
 3. It holds at width 64 (4,096 facts): dense 1.92, each expert alone 1.41, fused 1.79.

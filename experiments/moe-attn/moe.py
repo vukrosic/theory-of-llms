@@ -20,6 +20,7 @@ COPYW = env("COPYW", 0.5)                          # share of copy sequences
 ADAM_LR, EMB_MULT = env("ADAM_LR", 0.01), env("EMB_MULT", 8.0)
 DENSE0 = env("DENSE0", 0)                          # first DENSE0 layers dense (DeepSeek first_k_dense_replace)
 MUON_EXP = os.environ.get("MUON_EXP", "each")       # each: orthogonalize every expert's matrix alone; stack: one orthogonalization of all experts side by side
+KVH = env("KVH", H)                                # key/value heads (GQA); H = normal attention
 QKNORM = env("QKNORM", 1)                          # 0: no QK-norm (MLA-style); peak attention score is tracked
 SCALE = os.environ.get("SCALE", "keller")          # Muon step scale per matrix: keller max(1,r/c)^.5 | none | spectral (r/c)^.5 | moon 0.2*sqrt(max(r,c))
 ROUTER_MUON = env("ROUTER_MUON", 0)                # 1: router weight on Muon (as a plain 2D matrix) instead of Adam
@@ -97,18 +98,19 @@ class Block(nn.Module):
     def __init__(s, moe):
         super().__init__(); L = lambda i, o: nn.Linear(i, o, bias=False)
         s.n1, s.n2, s.qn, s.kn = RMS(D), RMS(D), RMS(D // H), RMS(D // H)
-        s.q, s.k, s.v, s.o = L(D, D), L(D, D), L(D, D), L(D, D)
+        s.q, s.k, s.v, s.o = L(D, D), L(D, D // H * KVH), L(D, D // H * KVH), L(D, D)
         s.is_moe = moe
         if moe: s.moe = MoE()
         else: s.gate, s.up, s.down = L(D, FF), L(D, FF), L(FF, D)
     def forward(s, x, x0):
         b, t, _ = x.shape; h = s.n1(x); sp = lambda z: z.view(b, t, H, D // H).transpose(1, 2)
-        q, k = sp(s.q(h)), sp(s.k(h))
+        sk = lambda z: z.view(b, t, KVH, D // H).transpose(1, 2).repeat_interleave(H // KVH, 1)   # GQA: KVH key/value heads shared by H query heads
+        q, k = sp(s.q(h)), sk(s.k(h))
         if QKNORM: q, k = s.qn(q), s.kn(k)
         q, k = rope(q), rope(k)
         if TRACK[0]:
             sc_ = (q @ k.transpose(-1, -2)) / (D // H) ** 0.5; TRACK[1].append(sc_.masked_fill(~torch.ones(t, t, dtype=torch.bool).tril(), -1e9).amax().item())
-        a = F.scaled_dot_product_attention(q, k, sp(s.v(h)), is_causal=True)
+        a = F.scaled_dot_product_attention(q, k, sk(s.v(h)), is_causal=True)
         x = x + s.o(a.transpose(1, 2).reshape(b, t, D)); h = s.n2(x)
         if s.is_moe: return x + s.moe(h, h if ROUTE == "h" else x0)       # x0 / both: router (also) reads the token embedding
         return x + s.down(F.silu(s.gate(h)) * s.up(h))
@@ -188,7 +190,7 @@ def train(lr, seed):
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "GENERIC", "LOADPOW", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
     row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")

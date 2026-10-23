@@ -22,3 +22,9 @@ Result (2 seeds, lr 0.02-0.08): blow-up lr identical. Layer-1 peak score dense/M
 - Fused gate_up / QKV under Muon: known (Dion3 2608.11612, Megatron #7077, Qwen3.8-Next per-head). Skipped.
 - Expert layout at B=128 (512 tok/expert/step), 150 steps: dense 1.14, each 0.54, fused 0.98 -> holds; added to finding as point 4.
 - Fine-grained E32K8 (EF=11<D): each 0.79, fused best 1.42 (x0.5) -> holds, added to finding point 2.
+- Default muon toy (MOE=8 sampled.py full 260 0.014, EXP_FUSED=1 added to mix.py): dense 2.687, each 2.680, fused x0.5 2.689 / x1 2.718 (2 seeds). MoE gain there is only 0.007, so the layout can't matter; consistent.
+
+## GQA (fewer key/value heads) x MoE (2026-10-24)
+A lab researcher who reads this would change: how hard they compress KV (GQA groups / MLA rank) in an MoE vs a dense model.
+Prediction: KVH=1 hurts MoE more than dense on facts (attention must deliver the subject that routing + experts use).
+Result: dense-MoE facts gap KVH4 0.53, KVH2 0.67, KVH1 0.36 (2 seeds); both lose about equally, noisy. No interaction. Dropped. (Note: code edits change float order -> same seed can move 0.2-0.3 on dense; compare within one code version.)
