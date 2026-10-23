@@ -12,17 +12,17 @@ At learning rate 0.028 the largest score is 12; at 0.04 it is 48; at 0.057 it is
 
 3. What moves the threshold:
 - Momentum: higher momentum lowers it (0.055 / 0.040 / 0.029 at momentum 0.90 / 0.95 / 0.98).
-- Depth: deeper models blow up sooner (at learning rate 0.04 the largest score is 34 / 73 / 94 with 2 / 4 / 8 layers). The first layer never blows up; the later layers go first.
+- Depth: deeper models blow up sooner (at learning rate 0.04 the largest score is 34 / 73 / 94 with 2 / 4 / 8 layers). Later layers blow up first; the first layer only at the highest learning rates (largest score 640 at 8× the best), and that is where the loss damage gets large.
 - Weight decay 0.1 raises the threshold 1.5× and keeps the scores 8-20× smaller above it.
 - Width (16 to 64) and training length (300 to 1,200 steps) barely move it.
 
-4. QK-Clip (Kimi K2's fix: shrink a head's queries and keys whenever its largest score passes a threshold) works only if the threshold is tight. With threshold 100 the loss at 8× the best learning rate is still 0.20 worse than QK-norm. With threshold 5, about half the largest score at the best learning rate, it matches QK-norm (4.071 vs 4.099; second seed 4.088 vs 4.137) and costs nothing at the best learning rate.
+4. QK-Clip (Kimi K2's fix: shrink a head's queries and keys whenever its largest score passes a threshold) with the usual threshold of 100 is enough up to about 4× the best learning rate, but at 8× it leaves the loss 0.14 worse than QK-norm (mean of 3 seeds). A threshold near the healthy scores (3-10 here) matches QK-norm and costs nothing at the best learning rate. More rules in [muon-qkclip-rules](muon-qkclip-rules.md).
 
-5. Two other fixes don't replace QK-norm. Capping the scores inside the softmax (Gemma 2's soft-capping at 30) halves the damage at 8× the best learning rate (4.221 vs 4.428, QK-norm 4.099), and a tighter cap of 5 is worse (4.264), because the raw scores still grow to about 4,000 underneath. An output gate on attention (Qwen's gated attention) does nothing (4.432); the scores still reach 5,700.
+5. Two other fixes don't replace QK-norm. Capping the scores inside the softmax (Gemma 2's soft-capping at 30) removes about two thirds of the damage at 8× the best learning rate (4.205 vs 4.358 without it, QK-norm 4.122, mean of 3 seeds), and a tighter cap of 5 is worse (4.264, seed 0), because the raw scores still grow to about 4,000 underneath. An output gate on attention (Qwen's gated attention) barely helps (4.336); the scores still reach 5,700.
 
 How to use this
 
-If you train with Muon and without QK-norm, keep the learning rate below about 2× your best one, and lower it more if you raise momentum or depth. Soft-capping and gating are not substitutes. If you use QK-Clip, set the threshold from the attention scores you see in a healthy run (around the largest score at the best learning rate), not a fixed 100.
+If you train with Muon and without QK-norm, keep the learning rate below about 2× your best one, and lower it more if you raise momentum or depth. Soft-capping and gating are not substitutes. If you use QK-Clip at a normal learning rate, 100 is fine; above about 4× the best learning rate, set the threshold near the attention scores of a healthy run instead.
 
 What is new and what is not
 

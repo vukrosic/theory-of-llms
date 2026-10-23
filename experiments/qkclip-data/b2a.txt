@@ -1,0 +1,8 @@
+TASKS=sort T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 2.7217 peak logit 40.419 final 36.381 (2.67s)
+TASKS=sort T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.5504 peak logit 463.899 final 428.771 (3.06s)
+TASKS=reverse T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 5.3020 peak logit 98.881 final 96.691 (3.25s)
+TASKS=reverse T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 5.3167 peak logit 776.015 final 773.123 (3.03s)
+TASKS=modadd T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 4.5769 peak logit 90.426 final 89.868 (3.05s)
+TASKS=modadd T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 4.5772 peak logit 658.424 final 615.413 (3.2s)
+TASKS=count T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 0.0023 peak logit 89.598 final 89.598 (3.28s)
+TASKS=count T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 0.0229 peak logit 956.962 final 848.356 (2.95s)

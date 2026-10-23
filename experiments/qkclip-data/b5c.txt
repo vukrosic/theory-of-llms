@@ -1,0 +1,1 @@
+TASKS=chains,sort,reverse,modadd T=128 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 4.0174 peak logit 33.019 final 32.899 (18.26s)

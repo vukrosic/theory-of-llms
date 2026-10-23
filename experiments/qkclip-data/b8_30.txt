@@ -1,0 +1,2 @@
+TASKS=c1.0 T=32 QKCLIP=30.0 nclip=433 QKNORM=0 lr=0.04: loss 3.5690 peak logit 31.851 final 28.926 (3.28s)
+TASKS=c1.0 T=32 QKCLIP=30.0 nclip=255 QKNORM=0 lr=0.014: loss 3.4169 peak logit 33.664 final 29.818 (3.11s)

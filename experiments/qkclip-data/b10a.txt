@@ -1,0 +1,12 @@
+n=1
+TASKS=c1.0,base T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 3.6120 peak logit 7.105 final 7.105 (2.73s)
+TASKS=c1.0,base T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.6147 peak logit 69.968 final 69.528 (3.21s)
+n=3
+TASKS=c1.0,base,s0,s2 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 3.5374 peak logit 6.29 final 5.824 (3.56s)
+TASKS=c1.0,base,s0,s2 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.5534 peak logit 16.072 final 14.05 (3.73s)
+n=7
+TASKS=c1.0,base,s0,s2,beta0.5,beta8,p0.1,p0.5 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 3.7865 peak logit 6.781 final 5.368 (3.45s)
+TASKS=c1.0,base,s0,s2,beta0.5,beta8,p0.1,p0.5 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.7800 peak logit 15.244 final 14.493 (3.94s)
+n=9
+TASKS=c1.0,base,s0,s2,beta0.5,beta8,p0.1,p0.5,d0.25,d0.9 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.014: loss 3.7755 peak logit 8.623 final 6.577 (3.18s)
+TASKS=c1.0,base,s0,s2,beta0.5,beta8,p0.1,p0.5,d0.25,d0.9 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.7778 peak logit 22.507 final 17.171 (3.1s)

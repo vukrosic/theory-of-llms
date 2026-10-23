@@ -16,7 +16,7 @@ torch.set_num_threads(1)
 QKNORM = int(os.environ.get("QKNORM", 1)); MOM = float(os.environ.get("MOM", 0.95)); WD = float(os.environ.get("WD", 0)); DECAY = int(os.environ.get("DECAY", 1))
 SOFTCAP = float(os.environ.get("SOFTCAP", 0)); GATE = int(os.environ.get("GATE", 0))
 QKCLIP = float(os.environ.get("QKCLIP", 0))   # tau; 0 = off. Kimi K2 QK-Clip, simple per-head version (all q,k dims clipped, sqrt(gamma) each; no MLA shared-rope exception)
-LOGEVERY = int(os.environ.get("LOGEVERY", 50)); WARM = 20; DFRAC = 0.5
+LOGEVERY = int(os.environ.get("LOGEVERY", 50)); WARM = int(os.environ.get("WARM", 20)); DFRAC = 0.5
 D, H, FF, V = L.D, L.H, L.FF, L.V
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "fixes.jsonl"))
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     tr, ev, mask = E.data()
     for lr in lrs:
         t0 = time.time(); loss, log, sv, heads, nclip = train(tr, ev, mask, lr, seed, E.STEPS)
-        row = dict(softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
+        row = dict(warm=WARM, softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
                    maxlogit_final=round(max(log[-1][1:]), 3), maxlogit_peak=round(max(max(r[1:]) for r in log), 3),
                    log=[[r[0]] + [round(v, 3) for v in r[1:]] for r in log], qk_specnorm=[round(v, 3) for v in sv], sec=round(time.time() - t0, 2))
         open(OUT, "a").write(json.dumps(row) + "\n")

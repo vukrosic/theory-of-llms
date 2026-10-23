@@ -1,0 +1,8 @@
+n=1
+TASKS=count,base T=32 QKCLIP=0.0 nclip=0 QKNORM=1 lr=0.04: loss 1.8305 peak logit 9.599 final 9.26 (3.92s)
+n=3
+TASKS=count,base,s0,s2 T=32 QKCLIP=0.0 nclip=0 QKNORM=1 lr=0.04: loss 2.6595 peak logit 7.009 final 6.687 (3.48s)
+n=7
+TASKS=count,base,s0,s2,beta0.5,beta8,p0.1,p0.5 T=32 QKCLIP=0.0 nclip=0 QKNORM=1 lr=0.04: loss 3.3297 peak logit 4.665 final 4.623 (3.51s)
+n=15
+TASKS=count,base,s0,s2,beta0.5,beta8,p0.1,p0.5,d0.25,d0.9,c0.5,c1.0,mix0,mix1,mix2,mix3 T=32 QKCLIP=0.0 nclip=0 QKNORM=1 lr=0.04: loss 3.7206 peak logit 4.19 final 4.041 (3.63s)

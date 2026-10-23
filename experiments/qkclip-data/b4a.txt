@@ -1,0 +1,9 @@
+chains n=1
+TASKS=base T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.5528 peak logit 6.265 final 2.134 (2.75s)
+TASKS=base T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.057: loss 3.5520 peak logit 45.736 final 34.263 (3.07s)
+chains n=2
+TASKS=base,s0 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 4.2158 peak logit 11.012 final 5.86 (3.25s)
+TASKS=base,s0 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.057: loss 4.2133 peak logit 57.735 final 53.613 (3.79s)
+chains n=4
+TASKS=base,s0,s2,beta0.5 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.04: loss 3.8031 peak logit 43.194 final 36.127 (3.27s)
+TASKS=base,s0,s2,beta0.5 T=32 QKCLIP=0.0 nclip=0 QKNORM=0 lr=0.057: loss 3.8168 peak logit 319.929 final 260.543 (2.91s)
