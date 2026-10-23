@@ -17,6 +17,7 @@ What do small language models actually build inside when they learn? We open up 
 | The learning rate sets how fast a model learns, not where it ends up | rates 0.001 to 0.16 all end within 0.01 of each other | [learning-rate-sets-speed](findings/learning-rate-sets-speed.md) |
 | Three things change Muon's best learning rate: batch size, momentum and learning rate decay | batch 4 -> 32 raises it 3x; width, depth, warmup and data barely move it | [what-changes-muon-learning-rate](findings/what-changes-muon-learning-rate.md) |
 | Without QK-norm, Muon's attention scores blow up above about 3x the best learning rate | largest score 12 at lr 0.028, 653 at 0.057; QK-Clip at threshold 100 doesn't stop the loss damage, threshold 5 does | [muon-attention-blowup](findings/muon-attention-blowup.md) |
+| Repeating data with Muon needs much higher weight decay, on embedding and head too | best weight decay 0.1 at 4 epochs, 3 at 16, 10 at 32; keeping 0.1 at 16 epochs costs 0.57 loss | [muon-weight-decay-epochs](findings/muon-weight-decay-epochs.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 

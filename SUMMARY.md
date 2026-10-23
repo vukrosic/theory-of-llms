@@ -18,3 +18,4 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [Learning rate sets speed, not where the model ends up](findings/learning-rate-sets-speed.md)
 - [What changes Muon's best learning rate](findings/what-changes-muon-learning-rate.md)
 - [Without QK-norm, attention scores blow up above a learning rate threshold](findings/muon-attention-blowup.md)
+- [Repeating data with Muon needs much higher weight decay](findings/muon-weight-decay-epochs.md)
