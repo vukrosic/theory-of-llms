@@ -106,7 +106,7 @@ def train(tr, ev, mask, lr, seed, steps):
                 p.add_(e / (1 - 0.9 ** (i + 1)) / ((e2 / (1 - 0.98 ** (i + 1))).sqrt() + 1e-8), alpha=-L.OTHER_LR * f)
     log.append([steps] + probe(m, pb)); heads = [[round(v, 2) for v in b.maxhead] for b in m.blocks]
     sv = [max(torch.linalg.matrix_norm(b.q.weight.detach(), 2).item(), 0) for b in m.blocks] + [torch.linalg.matrix_norm(b.k.weight.detach(), 2).item() for b in m.blocks]
-    ls = E.evaluate(m, ev, mask); return sum(ls.values()) / len(ls), log, sv, heads, nclip
+    ls = E.evaluate(m, ev, mask); train.ls = {k: round(float(v), 4) for k, v in ls.items()}; return sum(ls.values()) / len(ls), log, sv, heads, nclip
 
 
 if __name__ == "__main__":
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     tr, ev, mask = E.data()
     for lr in lrs:
         t0 = time.time(); loss, log, sv, heads, nclip = train(tr, ev, mask, lr, seed, E.STEPS)
-        row = dict(tasks=_t, H=H, nl=L.NL, warm=WARM, softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, clipL=QKCLIPL, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, wdqk=WDQK, lrqk=LRQK, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
+        row = dict(per=train.ls, tasks=_t, H=H, nl=L.NL, warm=WARM, softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, clipL=QKCLIPL, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, wdqk=WDQK, lrqk=LRQK, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
                    maxlogit_final=round(max(log[-1][1:]), 3), maxlogit_peak=round(max(max(r[1:]) for r in log), 3),
                    log=[[r[0]] + [round(v, 3) for v in r[1:]] for r in log], qk_specnorm=[round(v, 3) for v in sv], sec=round(time.time() - t0, 2))
         open(OUT, "a").write(json.dumps(row) + "\n")

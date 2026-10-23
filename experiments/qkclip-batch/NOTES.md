@@ -32,3 +32,9 @@ Result (8000 steps): WDQK 0.1 cost at 0.014: -0.017/0.000/+0.005 (mean -0.004, f
 ## Batch 7: lower learning rate on W_q, W_k only (LRQK multiplier; Anson & Aitchison 2511.21377 ablation form), 800 steps, 3 seeds
 Prediction: LRQK 0.25 at 0.113 ~4.15 (worse than WDQK 0.3's 4.116, since scores can still grow slowly without a pull-back) and costs +0.01 at 0.014.
 Result batch 7 (3 seeds unless noted): LRQK 0.5: 4.130 at 0.113 (peaks 576-1050), cost +0.002; LRQK 0.25: 4.105 (peaks ~200), cost +0.008; LRQK 0.125 (s0): 4.084, cost +0.023. Prediction wrong: lowering the q/k lr 4x works as well as WDQK 0.3 (4.116, cost 0.000) in short runs. q/k decay is not better than the published fix, just another one-line option.
+
+## Does QK-norm's copy benefit (0.15-0.34 on copy-only data) hide inside the full mix at the best lr?
+Lab-change: labs without QK-norm (MLA models) would know whether they lose copy/retrieval skill at a normal lr even though the average loss looks the same.
+Setup: full mix, lr 0.014 and 0.007, 800 steps, seeds 0-2, QKNORM 0/1/4 (keys only); per-task held-out loss (row field per).
+Prediction: on the mix, QK-norm helps copy tasks (c0.5, c1.0) by 0.05-0.1 and costs a bit elsewhere, so the average is flat.
+Result (per.jsonl, 3 seeds): inside the mix QK-norm changes every task by <= 0.02 at lr 0.014 and 0.007 (copy chains c0.5/c1.0: 0.000/+0.003), except count, where QK-norm is WORSE (+0.25 at 0.014, +0.07 at 0.007) and beta8 (-0.055 at 0.014 only). Prediction wrong: no hidden copy benefit in the mix (copy is barely learned there in 800 steps). Dropped.
