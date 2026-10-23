@@ -36,3 +36,9 @@ Result: dense-MoE facts gap KVH4 0.53, KVH2 0.67, KVH1 0.36 (2 seeds); both lose
 - Real text (DATA=tiny, TinyStories 4k BPE): 12-18 s per run and MoE gain only 0.013 at 400 steps (not capacity-bound). Can't test the layout on text under the 5 s rule.
 - Idle experts (LAZY knob): stale momentum gets full-size Muon steps when an expert gets 0 tokens, but that needs tokens/step < E/K, which lab batches never hit. Dropped without runs. Excitation (2602.21798) = utilization scaling (our LOADPOW), not Muon.
 - Mamba2 fused in_proj under Muon: taken (Muon Meets Mamba 2608.03941, App. D: per-slice NS beats merged by 0.024).
+
+## Expert momentum under Muon (2026-10-24)
+A lab researcher who reads this would change: the Muon momentum for routed experts vs attention/dense matrices (one number per group).
+Reasoning: each expert sees only K/E of the tokens, so its gradient is noisier; our momentum-vs-batch toy gave best 1-beta ∝ B^0.9, so experts (B*K/E tokens) would want 1-beta about (E/K)^0.9 smaller.
+Prediction: E8K2 best expert momentum ≈0.98-0.99 (vs 0.95 for the rest), gain ≥0.05 facts loss; best momentum rises further at K/E = 1/8 and 1/16.
+Result (lr 0.02, seeds 0|1): expert momentum 0.8 0.68|0.73, 0.85 0.68|0.71, 0.9 0.75|0.81, 0.95 0.84|0.83, 0.98 1.02|1.14, 0.99 1.30|1.28; whole model 0.9: 0.55|0.64. Opposite of prediction, and lower momentum helps every matrix in this 400-step toy (short-run artifact), not experts specially. Dropped.

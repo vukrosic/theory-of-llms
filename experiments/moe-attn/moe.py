@@ -29,6 +29,7 @@ LAZY = env("LAZY", 0)                              # experts with no tokens this
 LOADPOW = env("LOADPOW", 0.0)                      # per-expert Muon step x (expert's token share / fair share)^LOADPOW; 0 = off
 ROUTE = os.environ.get("ROUTE", "h")               # router input: h (normal: after attention), x0 (token embedding)
 EXP_MULT, ATT_MULT, ROUTER_MULT = env("EXP_MULT", 1.0), env("ATT_MULT", 1.0), env("ROUTER_MULT", 1.0)
+MOM = env("MOM", 0.95); EXP_MOM = env("EXP_MOM", MOM)   # Muon momentum; EXP_MOM: momentum for expert matrices only (default = MOM)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "runs.jsonl"))
 S0, R0, A0 = 0, NS, NS + NR; V = NS + NR + NA + 1  # token ranges: subjects, relations, answer words, one 'is' token (IS)
 IS = V - 1
@@ -184,7 +185,7 @@ def train(lr, seed):
                         for q in (blk.moe.gate.weight, blk.moe.up.weight, blk.moe.down.weight): ls[id(q)] = w
             for p, bf in zip(mats, buf):
                 iz = idle.get(id(p)); old = bf[iz].clone() if iz is not None and LAZY == 1 else None
-                bf.mul_(0.95).add_(p.grad); u = p.grad + 0.95 * bf
+                mo = EXP_MOM if p.ndim == 3 else MOM; bf.mul_(mo).add_(p.grad); u = p.grad + mo * bf
                 if old is not None: bf[iz] = old
                 if p.ndim == 3 and MUON_EXP == "stack":
                     e, o_, i_ = u.shape
@@ -212,7 +213,7 @@ def train(lr, seed):
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA", "MOM", "EXP_MOM"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
     row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")

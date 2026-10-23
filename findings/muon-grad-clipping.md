@@ -20,7 +20,9 @@ Muon's Newton-Schulz step throws away the size of the momentum, so people argue 
 
 4. It holds at width 32 with 8 heads (clean 3.881, clip all 3.882, Adam-only 4.017, normalize 3.891), with 4 layers (3.987 / 3.997 / 4.172 / 3.987) and with momentum 0.98 (4.020 / 4.027 / 4.172 / 4.031). One single 170× spike at step 400 of 800 costs +0.015 under Adam-only clipping and nothing with either fix.
 
-5. The clip threshold must sit near the usual gradient norm (0.41 here): threshold 1.0 gives 4.024, 3 gives 4.060, 10 gives 4.227.
+5. It holds in a mixture-of-experts model (8 experts, top-2, 8 skills, 260 steps, a bad batch every 26 steps, 170×, clip threshold 2 ≈ 1.8× the usual norm), mean of 3 seeds: no bad batches 2.683, clip everything 2.769, clip only the Adam group 3.275, Adam group clipped + each Muon gradient normalized 2.756, no clipping 5.12 (seed 0).
+
+6. The clip threshold must sit near the usual gradient norm (0.41 here): threshold 1.0 gives 4.024, 3 gives 4.060, 10 gives 4.227.
 
 How to use this
 
@@ -44,4 +46,6 @@ Spike size, seed 0 (loss scale 3 / 10 / 30 / 300 / 1000 = 4.6 / 15 / 46 / 457 / 
 
 Single spike at step 400: none 4.0707, Adam-only 4.0323, all 4.0171, normalize 4.0070. Momentum 0: clean 4.0487, all 4.0513, Adam-only 4.0513.
 
-Setup: 20-task mix (algorithmic tasks and token chains), 2 layers, width 16, 4 heads, RoPE, QK-norm, SwiGLU, RMSNorm, no biases. Muon (5-step Newton-Schulz, momentum 0.95 Nesterov) on attention and MLP matrices, Adam on embedding, head and norms. Batch 8, 800 steps, 20 warmup steps, lr decayed to zero over the last half. Bad batch at step i when i mod 50 = 25 and i < 720. About 3 s per run on a laptop CPU. Code: [experiments/muon-grad-spikes](../experiments/muon-grad-spikes/) (`CLIP=1 CLIPON=adam SPIKE_EVERY=50 SPIKE_SCALE=100 python3 attn.py 0.014 0`; `CLIPON=all|muon|adam`, `PRENORM=1`, `SPIKE_KIND=rand|rep`; chart `figure.py`).
+MoE model (seeds 0 / 1 / 2): no bad batches 2.668 / 2.692 / 2.688; clip everything 2.762 / 2.779 / 2.766; Adam-only 3.240 / 3.273 / 3.313; Adam-only + normalize 2.738 / 2.778 / 2.753. Seed 0: clip 2 with no bad batches 2.677, no clipping 5.120. Usual gradient norm there: median 1.12.
+
+Setup: 20-task mix (algorithmic tasks and token chains), 2 layers, width 16, 4 heads, RoPE, QK-norm, SwiGLU, RMSNorm, no biases. Muon (5-step Newton-Schulz, momentum 0.95 Nesterov) on attention and MLP matrices, Adam on embedding, head and norms. Batch 8, 800 steps, 20 warmup steps, lr decayed to zero over the last half. Bad batch at step i when i mod 50 = 25 and i < 720. About 3 s per run on a laptop CPU. Code: [experiments/muon-grad-spikes](../experiments/muon-grad-spikes/) (`CLIP=1 CLIPON=adam SPIKE_EVERY=50 SPIKE_SCALE=100 python3 attn.py 0.014 0`; `CLIPON=all|muon|adam`, `PRENORM=1`, `SPIKE_KIND=rand|rep`; chart `figure.py`). MoE model: the default toy in `muon/toy-suite` (2 layers, width 64, 8 SwiGLU experts top-2, 8 skills, lr 0.014, Muon on attention and expert matrices, each expert orthogonalized alone): `MOE=8 MSIGN=ns EMB_MULT=8 SPIKE_EVERY=26 SPIKE_SCALE=100 CLIP=2 CLIPON=adam python3 sampled.py full 0 260 0.014`.
