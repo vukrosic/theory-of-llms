@@ -11,11 +11,11 @@ a.axhline(4.017, color="#444", ls=":", lw=1); a.text(1000, 4.003, "no spikes", f
 a.set_xscale("log"); a.set_ylim(3.98, 4.6); a.set_xlabel("spike size (gradient norm / usual gradient norm)"); a.set_ylabel("held-out loss")
 a.set_title("A bad batch every 50 steps", fontsize=11); a.legend(frameon=False, fontsize=8.5, loc="upper left")
 a.text(1500, 4.585, "no clipping: 4.86, 5.48 →", ha="right", fontsize=8, color="#888888")
-th = ["1.0\n(2.4x usual)", "3\n(7x)", "10\n(25x)", "none"]; v = [4.024, 4.060, 4.227, 4.489]
-b.bar(range(4), [t - 3.98 for t in v], bottom=3.98, color=["#00798c", "#00798c", "#00798c", "#888888"], width=.6)
+th = ["0.2\n(0.5x usual)", "1.0\n(2.4x)", "3\n(7x)", "10\n(25x)", "none"]; v = [4.015, 4.024, 4.060, 4.227, 4.489]
+b.bar(range(5), [t - 3.98 for t in v], bottom=3.98, color=["#00798c"] * 4 + ["#888888"], width=.6)
 for i, t in enumerate(v): b.text(i, t + .01, f"{t:.3f}", ha="center", fontsize=9.5)
-b.set_xticks(range(4), th, fontsize=9); b.set_ylim(3.98, 4.6); b.set_ylabel("held-out loss"); b.set_xlabel("global clip threshold")
-b.set_title("Clip near the usual gradient norm (spike 170x)", fontsize=11)
+b.set_xticks(range(5), th, fontsize=8.5); b.set_ylim(3.98, 4.6); b.set_ylabel("held-out loss"); b.set_xlabel("global clip threshold")
+b.set_title("Lower clip threshold is better (spike 170x)", fontsize=11)
 for ax in (a, b): ax.spines[["top", "right"]].set_visible(False)
 fig.text(.01, .01, "2-layer model, width 16, 20-task mix, 800 steps, Muon (momentum 0.95) on matrices, Adam on embedding, head and norms; bad batch = random tokens with its loss scaled up; seed 0.", fontsize=8.5, color="#444")
 fig.tight_layout(rect=(0, .04, 1, 1)); fig.savefig("../../figures/muon-grad-clipping.png"); print("ok")
