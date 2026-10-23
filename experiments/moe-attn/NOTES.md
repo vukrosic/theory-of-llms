@@ -29,3 +29,10 @@ A lab researcher who reads this would change: how hard they compress KV (GQA gro
 Prediction: KVH=1 hurts MoE more than dense on facts (attention must deliver the subject that routing + experts use).
 Result: dense-MoE facts gap KVH4 0.53, KVH2 0.67, KVH1 0.36 (2 seeds); both lose about equally, noisy. No interaction. Dropped. (Note: code edits change float order -> same seed can move 0.2-0.3 on dense; compare within one code version.)
 - fusednorm (fused directions, each expert block rescaled to per-expert step size) x0.5: 1.24/1.34 ~ fused 1.28 -> directions, not step sizes. Added to finding.
+
+## Night 2026-10-24, after the layout finding
+- Megatron audit: `--moe-single-grouped-weight` packs experts into one TE GroupedTensor of logical shape [E*rows, cols] (2D); Megatron's plain Muon sends every 2D param to NS whole; only the layer-wise distributed optimizer asserts against it. Added to the finding (read from code, not run).
+- Upcycling under Muon: SPARKLING (2602.02472) covers symmetry breaking under Muon for expansion incl. expert-inner; Drop-Upcycling covers re-init. Skipped.
+- Real text (DATA=tiny, TinyStories 4k BPE): 12-18 s per run and MoE gain only 0.013 at 400 steps (not capacity-bound). Can't test the layout on text under the 5 s rule.
+- Idle experts (LAZY knob): stale momentum gets full-size Muon steps when an expert gets 0 tokens, but that needs tokens/step < E/K, which lab batches never hit. Dropped without runs. Excitation (2602.21798) = utilization scaling (our LOADPOW), not Muon.
+- Mamba2 fused in_proj under Muon: taken (Muon Meets Mamba 2608.03941, App. D: per-slice NS beats merged by 0.024).

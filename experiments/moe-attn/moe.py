@@ -10,7 +10,8 @@ import sys, os, json, time, math
 import torch, torch.nn as nn, torch.nn.functional as F
 torch.set_num_threads(1)
 env = lambda k, d: type(d)(os.environ.get(k, d))
-D, NL, H, T, B = env("D", 32), env("NL", 2), 4, 16, env("B", 32)
+D, NL, H, T, B = env("D", 32), env("NL", 2), 4, env("T", 16), env("B", 32)
+DATA = os.environ.get("DATA", "facts")            # facts | tiny: TinyStories tokens (4,096-token BPE), loss on every next token
 STEPS, WARM = env("STEPS", 400), env("WARM", 20)
 MOE, K = env("MOE", 0), env("K", 2)
 FF = env("FF", 88 * D // 32)                       # dense hidden; experts get FF // K each (same active size)
@@ -24,18 +25,27 @@ KVH = env("KVH", H)                                # key/value heads (GQA); H = 
 QKNORM = env("QKNORM", 1)                          # 0: no QK-norm (MLA-style); peak attention score is tracked
 SCALE = os.environ.get("SCALE", "keller")          # Muon step scale per matrix: keller max(1,r/c)^.5 | none | spectral (r/c)^.5 | moon 0.2*sqrt(max(r,c))
 ROUTER_MUON = env("ROUTER_MUON", 0)                # 1: router weight on Muon (as a plain 2D matrix) instead of Adam
+LAZY = env("LAZY", 0)                              # experts with no tokens this step: 1 = no momentum update and no step, 2 = momentum decays but no step
 LOADPOW = env("LOADPOW", 0.0)                      # per-expert Muon step x (expert's token share / fair share)^LOADPOW; 0 = off
 ROUTE = os.environ.get("ROUTE", "h")               # router input: h (normal: after attention), x0 (token embedding)
 EXP_MULT, ATT_MULT, ROUTER_MULT = env("EXP_MULT", 1.0), env("ATT_MULT", 1.0), env("ROUTER_MULT", 1.0)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "runs.jsonl"))
 S0, R0, A0 = 0, NS, NS + NR; V = NS + NR + NA + 1  # token ranges: subjects, relations, answer words, one 'is' token (IS)
 IS = V - 1
+if DATA == "tiny":
+    import numpy as np
+    _R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../rsi/data")
+    TRAIN, VALID = (np.load(os.path.join(_R, f), mmap_mode="r") for f in ("train.npy", "valid.npy"))
+    V = 4096
 GENERIC = env("GENERIC", 0)                        # 1: facts as [s, rel, is, ans, rel, is, ans, ...]: the token before every answer is the same 'is' token
 FACT = torch.randint(NA, (NS, NR), generator=torch.Generator().manual_seed(7)) + A0   # the fact table
 
 
 def gen(n, g):
     """n sequences of length T+1 and a loss mask over the T targets"""
+    if DATA == "tiny":
+        src = VALID if g.initial_seed() == 999 else TRAIN; i = torch.randint(len(src) - T - 1, (n,), generator=g).numpy()
+        return torch.from_numpy(src[i[:, None] + np.arange(T + 1)].astype(np.int64)), torch.ones(n, T, dtype=torch.bool), torch.zeros(n, dtype=torch.bool)
     x = torch.empty(n, T + 1, dtype=torch.long); m = torch.zeros(n, T, dtype=torch.bool)
     task = torch.rand(n, generator=g) < COPYW                                  # True = copy
     nf = int((~task).sum()); s = torch.randint(NS, (nf,), generator=g)
@@ -137,12 +147,14 @@ def ns(G):
 
 @torch.no_grad()
 def evaluate(m):
-    x, msk, task = gen(1024, torch.Generator().manual_seed(999)); lo = m(x[:, :-1]); y = x[:, 1:]
+    x, msk, task = gen(512 if DATA == "tiny" else 1024, torch.Generator().manual_seed(999)); lo = m(x[:, :-1]); y = x[:, 1:]
     l = F.cross_entropy(lo.reshape(-1, V), y.reshape(-1), reduction="none").view(y.shape)
     acc = (lo.argmax(-1) == y).float()
     out = {}
     for name, sel in (("facts", ~task), ("copy", task)):
-        mm = msk & sel[:, None]; out[name] = round(l[mm].mean().item(), 4); out[name + "_acc"] = round(acc[mm].mean().item(), 4)
+        mm = msk & sel[:, None]
+        if not mm.any(): continue
+        out[name] = round(l[mm].mean().item(), 4); out[name + "_acc"] = round(acc[mm].mean().item(), 4)
     return out
 
 
@@ -159,14 +171,21 @@ def train(lr, seed):
         x, msk, _ = gen(B, g); TRACK[0] = i % 25 == 0; lo = m(x[:, :-1]); TRACK[0] = False; loss = F.cross_entropy(lo[msk], x[:, 1:][msk])
         m.zero_grad(set_to_none=True); loss.backward()
         with torch.no_grad():
-            ls = {}
+            ls = {}; idle = {}
+            if LAZY:
+                for blk in m.blocks:
+                    if blk.is_moe:
+                        c = torch.bincount(blk.moe.top.flatten(), minlength=MOE)
+                        for q in (blk.moe.gate.weight, blk.moe.up.weight, blk.moe.down.weight): idle[id(q)] = c == 0
             if LOADPOW:
                 for blk in m.blocks:
                     if blk.is_moe:
                         c = torch.bincount(blk.moe.top.flatten(), minlength=MOE).float(); w = (c / c.mean()).pow(LOADPOW)[:, None, None]
                         for q in (blk.moe.gate.weight, blk.moe.up.weight, blk.moe.down.weight): ls[id(q)] = w
             for p, bf in zip(mats, buf):
+                iz = idle.get(id(p)); old = bf[iz].clone() if iz is not None and LAZY == 1 else None
                 bf.mul_(0.95).add_(p.grad); u = p.grad + 0.95 * bf
+                if old is not None: bf[iz] = old
                 if p.ndim == 3 and MUON_EXP == "stack":
                     e, o_, i_ = u.shape
                     if o_ > i_: u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5      # gate/up: experts stacked by rows
@@ -181,6 +200,7 @@ def train(lr, seed):
                     u = ns(u); r_, c_ = p.shape[-2], p.shape[-1]
                     sc = {"keller": max(1, r_ / c_) ** 0.5, "none": 1.0, "spectral": (r_ / c_) ** 0.5, "moon": 0.2 * max(r_, c_) ** 0.5}[SCALE]
                 if id(p) in ls: u = u * ls[id(p)]
+                if iz is not None: u[iz] = 0
                 p.add_(u, alpha=-lr * f * mult[id(p)] * sc)
             for p, a, b2 in zip(rest, e1, e2):
                 if p.grad is None: continue                           # unused QK-norm weights when QKNORM=0
@@ -192,7 +212,7 @@ def train(lr, seed):
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
     row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")

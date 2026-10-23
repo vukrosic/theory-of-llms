@@ -21,3 +21,4 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [When Muon needs QK-Clip, and how to set it](findings/muon-qkclip-rules.md)
 - [Repeating data with Muon needs much higher weight decay](findings/muon-weight-decay-epochs.md)
 - [With Muon, orthogonalize each MoE expert alone](findings/muon-moe-expert-layout.md)
+- [Keep gradient clipping on for Muon matrices](findings/muon-grad-clipping.md)
