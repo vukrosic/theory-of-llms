@@ -16,3 +16,4 @@ The order of the findings lives only here. Files have no numbers, so they can be
 ## How learning unfolds
 - [Weight decay forces the clock](findings/weight-decay-forces-the-clock.md)
 - [Learning rate sets speed, not where the model ends up](findings/learning-rate-sets-speed.md)
+- [What changes Muon's best learning rate](findings/what-changes-muon-learning-rate.md)

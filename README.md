@@ -15,6 +15,7 @@ What do small language models actually build inside when they learn? We open up 
 | Experts split by skill on their own | facts and counting share one expert, copy and sort another | [experts-split-by-skill](findings/experts-split-by-skill.md) |
 | Counts are stored in order on a bent line | 0, 1, 2, 3, 4 zeros sit in order; one straight readout gets 99% | [count-on-a-line](findings/count-on-a-line.md) |
 | The learning rate sets how fast a model learns, not where it ends up | rates 0.001 to 0.16 all end within 0.01 of each other | [learning-rate-sets-speed](findings/learning-rate-sets-speed.md) |
+| Three things change Muon's best learning rate: batch size, momentum and learning rate decay | batch 4 -> 32 raises it 3x; width, depth, warmup and data barely move it | [what-changes-muon-learning-rate](findings/what-changes-muon-learning-rate.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 
