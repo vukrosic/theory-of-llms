@@ -20,7 +20,7 @@ What do small language models actually build inside when they learn? We open up 
 | When Muon needs QK-Clip, and how to set it | not needed at the normal lr even in long runs; threshold 100 is enough up to 4x the best lr; check every 10 steps; keep it on while lr is high; weight decay 0.3 on only W_q, W_k does the same job | [muon-qkclip-rules](findings/muon-qkclip-rules.md) |
 | Repeating data with Muon needs much higher weight decay, on embedding and head too | best weight decay 0.1 at 4 epochs, 3 at 16, 10 at 32; keeping 0.1 at 16 epochs costs 0.57 loss | [muon-weight-decay-epochs](findings/muon-weight-decay-epochs.md) |
 | With Muon, orthogonalize each MoE expert alone | experts treated as one fused matrix: 66% facts right vs 82% per expert, close to a dense model (63%) | [muon-moe-expert-layout](findings/muon-moe-expert-layout.md) |
-| Keep gradient clipping on for Muon matrices | clipping only the Adam group under bad batches: loss 4.158 vs 4.037 when clipping everything; dividing each Muon gradient by its norm before momentum also fixes it (4.038) | [muon-grad-clipping](findings/muon-grad-clipping.md) |
+| Keep gradient clipping on for Muon matrices, with a low threshold | clipping only the Adam group under bad batches: loss 4.158; clipping everything at 1.0: 4.037; at half the usual gradient norm: 4.026 (clean 4.029) | [muon-grad-clipping](findings/muon-grad-clipping.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 

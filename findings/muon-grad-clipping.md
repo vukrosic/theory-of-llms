@@ -1,4 +1,4 @@
-# Keep gradient clipping on for Muon: one huge gradient steers its momentum for dozens of steps
+# Keep gradient clipping on for Muon, with a low threshold: one huge gradient steers its momentum for dozens of steps
 
 Muon's Newton-Schulz step throws away the size of the momentum, so people argue global gradient clipping does nothing for Muon matrices and should only clip the Adam group (embedding, head, norms). Megatron-LM has an open change that does this ([PR #5395](https://github.com/NVIDIA/Megatron-LM/pull/5395)). I fed the same model a bad batch (random tokens, loss scaled up) every 50 steps and compared clipping choices.
 
@@ -7,7 +7,8 @@ Muon's Newton-Schulz step throws away the size of the momentum, so people argue 
 | clipping | held-out loss |
 |---|---|
 | no bad batches | 4.029 |
-| clip everything at 1.0 | 4.037 |
+| clip everything at 0.2 (half the usual gradient norm) | 4.026 |
+| clip everything at 1.0 (2.4× the usual norm) | 4.037 |
 | clip only the Adam group (PR #5395) | 4.158 |
 | Adam group clipped, each Muon gradient divided by its own norm before momentum | 4.038 |
 | no clipping | 4.49 (seed 0) |
@@ -20,13 +21,13 @@ Muon's Newton-Schulz step throws away the size of the momentum, so people argue 
 
 4. It holds at width 32 with 8 heads (clean 3.881, clip all 3.882, Adam-only 4.017, normalize 3.891), with 4 layers (3.987 / 3.997 / 4.172 / 3.987) and with momentum 0.98 (4.020 / 4.027 / 4.172 / 4.031). One single 170× spike at step 400 of 800 costs +0.015 under Adam-only clipping and nothing with either fix.
 
-5. It holds in a mixture-of-experts model (8 experts, top-2, 8 skills, 260 steps, a bad batch every 26 steps, 170×, clip threshold 2 ≈ 1.8× the usual norm), mean of 3 seeds: no bad batches 2.683, clip everything 2.769, clip only the Adam group 3.275, Adam group clipped + each Muon gradient normalized 2.756, no clipping 5.12 (seed 0).
+5. It holds in a mixture-of-experts model (8 experts, top-2, 8 skills, 260 steps, a bad batch every 26 steps, 170×), mean of 3 seeds: no bad batches 2.683, clip everything at 0.5 (half the usual norm) 2.722, clip everything at 2 (1.8× the usual norm) 2.769, clip only the Adam group 3.275, Adam group clipped + each Muon gradient normalized 2.756, no clipping 5.12 (seed 0).
 
-6. The clip threshold must sit near the usual gradient norm (0.41 here): threshold 1.0 gives 4.024, 3 gives 4.060, 10 gives 4.227.
+6. Lower thresholds are better, even below the usual gradient norm (0.41 here), seed 0 with spikes: threshold 0.1 gives 4.015, 0.2 gives 4.015, 1.0 gives 4.024, 3 gives 4.060, 10 gives 4.227. A threshold below the usual norm clips every step, which costs nothing on clean data because Muon and Adam both ignore the overall gradient size: 4.025 vs 4.029 unclipped (3 seeds, threshold 0.2), and 2.671 vs 2.683 in the MoE model (threshold 0.5).
 
 How to use this
 
-If you train with Muon, keep global gradient clipping over all parameters, Muon matrices included. If you want Muon out of the clipping, divide each Muon matrix's gradient by its own Frobenius norm before adding it to the momentum (one line, no threshold, no cost on clean data in either toy: 4.027 vs 4.029, and 2.676 vs 2.683 in the MoE model); this also avoids the Newton-Schulz eps-floor stall that motivated the Megatron change.
+If you train with Muon, keep global gradient clipping over all parameters, Muon matrices included, and set the threshold at or below the usual gradient norm (half the median worked in both toys), not the default 1.0 if your gradient norm runs well below 1. If you want Muon out of the clipping, divide each Muon matrix's gradient by its own Frobenius norm before adding it to the momentum (one line, no threshold, no cost on clean data in either toy: 4.027 vs 4.029, and 2.676 vs 2.683 in the MoE model); this also avoids the Newton-Schulz eps-floor stall that motivated the Megatron change.
 
 What is new and what is not
 
@@ -44,8 +45,10 @@ Bad batch every 50 steps, loss ×100 (170× usual norm): clip all 4.0240 / 4.039
 
 Spike size, seed 0 (loss scale 3 / 10 / 30 / 300 / 1000 = 4.6 / 15 / 46 / 457 / 1520× usual norm), none | Adam-only | all | Adam-only + normalize: 4.0343 4.1093 4.2317 4.8594 5.4839 | 4.0303 4.0495 4.1079 4.1860 4.2412 | 4.0188 4.0240 4.0240 4.0240 4.0240 | 4.0216 4.0250 4.0249 4.0249 4.0250. Seeds 1 / 2 at scale 30: Adam-only 4.1185 / 4.1104, all 4.0396 / 4.0473, none 4.32 / 4.29; at scale 300: Adam-only 4.1944 / 4.1704, all 4.0396 / 4.0473, normalize 4.0492 / 4.0410, none 4.90 / 4.92.
 
+Clip 0.2 (seeds 0 / 1 / 2): no bad batches 4.0127 / 4.0372 / 4.0249; bad batches ×100 4.0146 / 4.0345 / 4.0286. Seed 0: clip 0.1 4.0127 clean, 4.0146 with bad batches; clip 0.2 with ×1000 bad batches 4.0148.
+
 Single spike at step 400: none 4.0707, Adam-only 4.0323, all 4.0171, normalize 4.0070. Momentum 0: clean 4.0487, all 4.0513, Adam-only 4.0513.
 
-MoE model (seeds 0 / 1 / 2): no bad batches 2.668 / 2.692 / 2.688; clip everything 2.762 / 2.779 / 2.766; Adam-only 3.240 / 3.273 / 3.313; Adam-only + normalize 2.738 / 2.778 / 2.753. Normalize with no bad batches 2.676 / 2.693 / 2.658. Seed 0: clip 2 with no bad batches 2.677, no clipping 5.120. Usual gradient norm there: median 1.12.
+MoE model (seeds 0 / 1 / 2): no bad batches 2.668 / 2.692 / 2.688; clip everything 2.762 / 2.779 / 2.766; Adam-only 3.240 / 3.273 / 3.313; Adam-only + normalize 2.738 / 2.778 / 2.753. Normalize with no bad batches 2.676 / 2.693 / 2.658. Clip 0.5: no bad batches 2.662 / 2.690 / 2.661, bad batches 2.706 / 2.732 / 2.728. Seed 0: clip 2 with no bad batches 2.677, no clipping 5.120. Usual gradient norm there: median 1.12.
 
 Setup: 20-task mix (algorithmic tasks and token chains), 2 layers, width 16, 4 heads, RoPE, QK-norm, SwiGLU, RMSNorm, no biases. Muon (5-step Newton-Schulz, momentum 0.95 Nesterov) on attention and MLP matrices, Adam on embedding, head and norms. Batch 8, 800 steps, 20 warmup steps, lr decayed to zero over the last half. Bad batch at step i when i mod 50 = 25 and i < 720. About 3 s per run on a laptop CPU. Code: [experiments/muon-grad-spikes](../experiments/muon-grad-spikes/) (`CLIP=1 CLIPON=adam SPIKE_EVERY=50 SPIKE_SCALE=100 python3 attn.py 0.014 0`; `CLIPON=all|muon|adam`, `PRENORM=1`, `SPIKE_KIND=rand|rep`; chart `figure.py`). MoE model: the default toy in `muon/toy-suite` (2 layers, width 64, 8 SwiGLU experts top-2, 8 skills, lr 0.014, Muon on attention and expert matrices, each expert orthogonalized alone): `MOE=8 MSIGN=ns EMB_MULT=8 SPIKE_EVERY=26 SPIKE_SCALE=100 CLIP=2 CLIPON=adam python3 sampled.py full 0 260 0.014`.
