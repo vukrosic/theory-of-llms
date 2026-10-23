@@ -25,3 +25,10 @@ Result seeds 0-2, 8000 steps: lr 0.113 WDQK 0.3 3.874/3.874/3.874 (mean 3.874) v
 Batch 5: lab default wd 0.1 on everything, 8000 steps, lr 0.113, seeds 0-2, with and without tau 10.
 Prediction: WD 0.1 alone ~3.87 (like clip); tau 10 on top adds <0.01.
 Result batch 5 (8000 steps, 0.113): WD 0.1 all 3.911/3.912/3.918 (3.914, peaks 300-835), + tau 10 3.895/3.915/3.901 (3.904); no wd: none 3.912 / 4.293 (seed 1, peak 153k), tau 10 3.870, WDQK 0.3 3.874. WD 0.1 on everything stops the catastrophic seed but is 0.04 worse than q/k-only decay or the clip at this lr (decaying all weights at 8x lr costs). Dropped as a separate point.
+
+## Batch 6: WDQK 0.1 at 8000 steps (is there a value free at the best lr that still fixes 8x?)
+Prediction: cost at 0.014 ~+0.003 (3 seeds); at 0.113 ~3.88 (between 0.3's 3.874 and none).
+Result (8000 steps): WDQK 0.1 cost at 0.014: -0.017/0.000/+0.005 (mean -0.004, free); at 0.113: 3.879 (s0)/3.878/3.900 (3.886; peaks 1400-2200) vs QK-Clip tau 10 3.870, WDQK 0.3 3.874. So 0.1 is free in long runs and gets most of the clip's benefit; 0.3 matches the clip but costs 0.01.
+## Batch 7: lower learning rate on W_q, W_k only (LRQK multiplier; Anson & Aitchison 2511.21377 ablation form), 800 steps, 3 seeds
+Prediction: LRQK 0.25 at 0.113 ~4.15 (worse than WDQK 0.3's 4.116, since scores can still grow slowly without a pull-back) and costs +0.01 at 0.014.
+Result batch 7 (3 seeds unless noted): LRQK 0.5: 4.130 at 0.113 (peaks 576-1050), cost +0.002; LRQK 0.25: 4.105 (peaks ~200), cost +0.008; LRQK 0.125 (s0): 4.084, cost +0.023. Prediction wrong: lowering the q/k lr 4x works as well as WDQK 0.3 (4.116, cost 0.000) in short runs. q/k decay is not better than the published fix, just another one-line option.

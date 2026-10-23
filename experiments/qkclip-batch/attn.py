@@ -25,6 +25,7 @@ SOFTCAP = float(os.environ.get("SOFTCAP", 0)); GATE = int(os.environ.get("GATE",
 QKCLIP = float(os.environ.get("QKCLIP", 0))   # tau; 0 = off. Kimi K2 QK-Clip, simple per-head version (all q,k dims clipped, sqrt(gamma) each; no MLA shared-rope exception)
 QKCLIPL = int(os.environ.get("QKCLIPL", 0))   # 1 = one gamma per layer from the layer's max head (instead of per head); off by default
 WDQK = float(os.environ.get("WDQK", 0))   # weight decay on W_q, W_k only; off by default
+LRQK = float(os.environ.get("LRQK", 1))   # learning-rate multiplier on W_q, W_k only; 1 = off
 LOGEVERY = int(os.environ.get("LOGEVERY", 50)); WARM = int(os.environ.get("WARM", 20)); DFRAC = 0.5
 D, H, FF, V = L.D, L.H, L.FF, L.V
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "runs.jsonl"))
@@ -95,7 +96,7 @@ def train(tr, ev, mask, lr, seed, steps):
                     p = mats[j]
                     if WD: p.mul_(1 - lr * f * WD)
                     if WDQK and id(p) in qk: p.mul_(1 - lr * f * WDQK)
-                    p.add_(o.T if p.shape[0] > p.shape[1] else o, alpha=-lr * f * max(1, p.shape[0] / p.shape[1]) ** 0.5)
+                    p.add_(o.T if p.shape[0] > p.shape[1] else o, alpha=-lr * f * max(1, p.shape[0] / p.shape[1]) ** 0.5 * (LRQK if id(p) in qk else 1))
             if QKCLIP:                                                   # QK-Clip after the step, using this step's training-batch per-head max logit
                 for b in m.blocks:
                     g = (QKCLIP / (b.phead.max().expand_as(b.phead) if QKCLIPL else b.phead)).clamp(max=1.0); nclip += int((g < 1).sum()); sg = g.sqrt().repeat_interleave(D // H)[:, None]
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     tr, ev, mask = E.data()
     for lr in lrs:
         t0 = time.time(); loss, log, sv, heads, nclip = train(tr, ev, mask, lr, seed, E.STEPS)
-        row = dict(tasks=_t, H=H, nl=L.NL, warm=WARM, softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, clipL=QKCLIPL, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, wdqk=WDQK, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
+        row = dict(tasks=_t, H=H, nl=L.NL, warm=WARM, softcap=SOFTCAP, gate=GATE, qkclip=QKCLIP, clipL=QKCLIPL, nclip=nclip, qknorm=QKNORM, D=D, B=L.B, steps=E.STEPS, mom=MOM, wd=WD, wdqk=WDQK, lrqk=LRQK, decay=DECAY, heads=heads, lr=lr, seed=seed, loss=round(loss, 5),
                    maxlogit_final=round(max(log[-1][1:]), 3), maxlogit_peak=round(max(max(r[1:]) for r in log), 3),
                    log=[[r[0]] + [round(v, 3) for v in r[1:]] for r in log], qk_specnorm=[round(v, 3) for v in sv], sec=round(time.time() - t0, 2))
         open(OUT, "a").write(json.dumps(row) + "\n")
