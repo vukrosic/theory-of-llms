@@ -26,7 +26,7 @@ Muon's Newton-Schulz step throws away the size of the momentum, so people argue 
 
 How to use this
 
-If you train with Muon, keep global gradient clipping over all parameters, Muon matrices included. If you want Muon out of the clipping, divide each Muon matrix's gradient by its own Frobenius norm before adding it to the momentum (one line, no threshold, no cost on clean data here: 4.027 vs 4.029); this also avoids the Newton-Schulz eps-floor stall that motivated the Megatron change.
+If you train with Muon, keep global gradient clipping over all parameters, Muon matrices included. If you want Muon out of the clipping, divide each Muon matrix's gradient by its own Frobenius norm before adding it to the momentum (one line, no threshold, no cost on clean data in either toy: 4.027 vs 4.029, and 2.676 vs 2.683 in the MoE model); this also avoids the Newton-Schulz eps-floor stall that motivated the Megatron change.
 
 What is new and what is not
 
@@ -46,6 +46,6 @@ Spike size, seed 0 (loss scale 3 / 10 / 30 / 300 / 1000 = 4.6 / 15 / 46 / 457 / 
 
 Single spike at step 400: none 4.0707, Adam-only 4.0323, all 4.0171, normalize 4.0070. Momentum 0: clean 4.0487, all 4.0513, Adam-only 4.0513.
 
-MoE model (seeds 0 / 1 / 2): no bad batches 2.668 / 2.692 / 2.688; clip everything 2.762 / 2.779 / 2.766; Adam-only 3.240 / 3.273 / 3.313; Adam-only + normalize 2.738 / 2.778 / 2.753. Seed 0: clip 2 with no bad batches 2.677, no clipping 5.120. Usual gradient norm there: median 1.12.
+MoE model (seeds 0 / 1 / 2): no bad batches 2.668 / 2.692 / 2.688; clip everything 2.762 / 2.779 / 2.766; Adam-only 3.240 / 3.273 / 3.313; Adam-only + normalize 2.738 / 2.778 / 2.753. Normalize with no bad batches 2.676 / 2.693 / 2.658. Seed 0: clip 2 with no bad batches 2.677, no clipping 5.120. Usual gradient norm there: median 1.12.
 
 Setup: 20-task mix (algorithmic tasks and token chains), 2 layers, width 16, 4 heads, RoPE, QK-norm, SwiGLU, RMSNorm, no biases. Muon (5-step Newton-Schulz, momentum 0.95 Nesterov) on attention and MLP matrices, Adam on embedding, head and norms. Batch 8, 800 steps, 20 warmup steps, lr decayed to zero over the last half. Bad batch at step i when i mod 50 = 25 and i < 720. About 3 s per run on a laptop CPU. Code: [experiments/muon-grad-spikes](../experiments/muon-grad-spikes/) (`CLIP=1 CLIPON=adam SPIKE_EVERY=50 SPIKE_SCALE=100 python3 attn.py 0.014 0`; `CLIPON=all|muon|adam`, `PRENORM=1`, `SPIKE_KIND=rand|rep`; chart `figure.py`). MoE model: the default toy in `muon/toy-suite` (2 layers, width 64, 8 SwiGLU experts top-2, 8 skills, lr 0.014, Muon on attention and expert matrices, each expert orthogonalized alone): `MOE=8 MSIGN=ns EMB_MULT=8 SPIKE_EVERY=26 SPIKE_SCALE=100 CLIP=2 CLIPON=adam python3 sampled.py full 0 260 0.014`.
