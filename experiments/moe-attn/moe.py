@@ -29,6 +29,7 @@ LAZY = env("LAZY", 0)                              # experts with no tokens this
 LOADPOW = env("LOADPOW", 0.0)                      # per-expert Muon step x (expert's token share / fair share)^LOADPOW; 0 = off
 ROUTE = os.environ.get("ROUTE", "h")               # router input: h (normal: after attention), x0 (token embedding)
 EXP_MULT, ATT_MULT, ROUTER_MULT = env("EXP_MULT", 1.0), env("ATT_MULT", 1.0), env("ROUTER_MULT", 1.0)
+SWAP_EXP = env("SWAP_EXP", 0)                      # 1: expert step scale computed on the transposed shape
 GU_FUSED = env("GU_FUSED", 0)                      # 1: SwiGLU gate and up orthogonalized as one stacked [2F, D] matrix (Megatron linear_fc1 storage), per expert for MoE
 MOM = env("MOM", 0.95); EXP_MOM = env("EXP_MOM", MOM)   # Muon momentum; EXP_MOM: momentum for expert matrices only (default = MOM)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "runs.jsonl"))
@@ -211,6 +212,7 @@ def train(lr, seed):
                     e, o_, i_ = u.shape; u = ns(u.reshape(e, o_ * i_)).view(e, o_, i_); sc = 1.0
                 else:
                     u = ns(u); r_, c_ = p.shape[-2], p.shape[-1]
+                    if SWAP_EXP and p.ndim == 3: r_, c_ = c_, r_                  # experts stored [E, in, out]: shape scale reads the matrix backwards (NeMo Automodel PR 4114)
                     sc = {"keller": max(1, r_ / c_) ** 0.5, "none": 1.0, "spectral": (r_ / c_) ** 0.5, "moon": 0.2 * max(r_, c_) ** 0.5}[SCALE]
                 if id(p) in ls: u = u * ls[id(p)]
                 if iz is not None: u[iz] = 0
@@ -225,7 +227,7 @@ def train(lr, seed):
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA", "MOM", "EXP_MOM", "GU_FUSED"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA", "MOM", "EXP_MOM", "GU_FUSED", "SWAP_EXP"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
     row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")

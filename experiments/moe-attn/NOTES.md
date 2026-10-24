@@ -62,3 +62,8 @@ Result: NS=512, 1200 steps, seeds 0|1: dense 0.648|0.816 (86%|81%), each 0.446|0
 ## Expert axis as reduction axis (MaxText #4798) (2026-10-24)
 Prediction: per-input-column [E, out] orthogonalization at best EXP_MULT is near dense or worse (like flat, 1.5-1.6).
 Result (NS=256, lr 0.02, seeds 0|1, same code version): eaxis x0.25 1.40|1.43, x0.5 1.24|1.36, x1 1.30|1.24 (69%|71%), x2 2.33|2.50, x4 4.00|4.15; each x1 0.837|0.827 (82%|83%); dense 1.377|1.338 (68%|69%). Prediction held. Added to finding.
+
+## Expert shape scale read backwards ([E, in, out] storage, NeMo Automodel PR 4114) (2026-10-24)
+A lab researcher would change: check expert orientation when using an orientation-dependent Muon scale (spectral sqrt(out/in), keller), or use the orientation-free RMS scale.
+Prediction: E32K8 (EF 11 < D 32), SCALE=spectral, swapped costs +0.15-0.3 facts loss (gate/up 2.9x too big, down 2.9x too small).
+Result (E32K8 EF 11, NS=256, seeds 0|1): keller correct 0.800|0.785 (83%), swapped 0.915|0.935 (79%); swapped lr 0.01/0.014/0.028: 1.13/0.94/1.04; EXP_MULT 0.5/2: 1.01/1.66. spectral correct 0.83|0.92, swapped 0.96|1.04. +0.13 not recoverable by lr. Added to finding.
