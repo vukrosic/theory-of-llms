@@ -8,3 +8,4 @@ Prediction: on clean data clip/prenorm change nothing (<0.005). With a bad batch
 Toy: qkclip-batch model (2 layers, width 16, 20-task mix, 800 steps, Muon 0.95 Nesterov, lr 0.014 = best), ~3 s/run.
 - Prediction single spike (x100 at step 400): Adam-only clip +0.02 vs clip-all.
 - Prediction MOM=0: Adam-only clip = clip-all (no momentum to carry the spike).
+- 2026-10-24 clip threshold far below usual norm (0.001, 0.1) = same as 0.2/0.5 within 0.01 in both toys (3 seeds); added to finding point 6.
