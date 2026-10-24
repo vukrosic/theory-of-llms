@@ -1,0 +1,10 @@
+width 32 steps 260 seed 0  train 5.5s total 13.7s  acc chain:0.29 copy:0.21 factc:0.91 back2:0.66 recall:0.09 sort:0.27 factr:0.97 count:0.45
+ count base 0.309
+   site 1 lin 0.938 mlp 1.0 pc1 0.986 turn 0.976  chord s1 0.14 best 0.36@4 | line s1 0.14 best 0.36@4 | first s1 0.26 best 0.35@4 | rand s1 0.02 best 0.10@4
+   site 2 lin 0.946 mlp 0.983 pc1 0.943 turn 0.887  chord s1 0.24 best 0.43@4 | line s1 0.23 best 0.41@4 | first s1 0.28 best 0.31@2 | rand s1 0.03 best 0.12@4
+ rel base 0.947
+   site 1 lin 1.0 mlp 1.0 pc1 1.0 turn 1.0  0to1: s1 0.142 best 0.46@2 rand 0.0 1to0: s1 0.091 best 0.364@2 rand 0.045
+   site 2 lin 1.0 mlp 1.0 pc1 1.0 turn 1.0  0to1: s1 0.487 best 0.504@2 rand 0.044 1to0: s1 0.5 best 0.5@1 rand 0.008
+ drift: directions from step 65 on the final model: site 1 count {'chord_s1': 0.025, 'chord_best': 0.164, 'cos': 0.667, 'probe': 0.31} rel {'best': 0.435, 'cos': 0.763, 'probe': 0.799} | site 2 count {'chord_s1': 0.03, 'chord_best': 0.179, 'cos': 0.499, 'probe': 0.368} rel {'best': 0.32, 'cos': 0.707, 'probe': 0.854}
+ drift: directions from step 130 on the final model: site 1 count {'chord_s1': 0.073, 'chord_best': 0.295, 'cos': 0.844, 'probe': 0.228} rel {'best': 0.407, 'cos': 0.91, 'probe': 0.98} | site 2 count {'chord_s1': 0.08, 'chord_best': 0.268, 'cos': 0.694, 'probe': 0.389} rel {'best': 0.585, 'cos': 0.914, 'probe': 0.977}
+ drift: directions from step 195 on the final model: site 1 count {'chord_s1': 0.131, 'chord_best': 0.319, 'cos': 0.947, 'probe': 0.589} rel {'best': 0.412, 'cos': 0.976, 'probe': 0.988} | site 2 count {'chord_s1': 0.156, 'chord_best': 0.34, 'cos': 0.908, 'probe': 0.433} rel {'best': 0.537, 'cos': 0.975, 'probe': 1.0}

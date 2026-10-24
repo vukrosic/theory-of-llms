@@ -5,6 +5,7 @@ The order of the findings lives only here. Files have no numbers, so they can be
 ## How a model stores things
 - [Numbers on a clock](findings/clock-addition.md)
 - [Counts on a line](findings/count-on-a-line.md)
+- [Counts bend from a line into corners, so one steering direction can't set them](findings/ordered-values-bend.md)
 - [Muon packs features the same way, and weight decay sets how many fit](findings/muon-superposition.md)
 
 ## How it moves information
