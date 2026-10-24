@@ -72,3 +72,28 @@ absval.py: one run 11.9 s at n=100 m=40 3000 steps (over the 5 s limit); seed 0 
 
 Prediction (wd seeds 1,2): same features stored as seed 0 within +-1 at every wd; top singular value just under 1/wd.
 Result: seeds 1,2 identical to seed 0 (feats 14/10/7/4/3 at wd 0.5/0.7/1/1.5/2). Prediction right. Note: 7 other heavy python procs were running from other sessions during these runs (some runs 9-16 s).
+
+## State 2026-10-24
+- Page written: findings/muon-superposition.md (commit 721d580, local only; the repo had 26 other unpushed commits from sibling sessions, so nothing was pushed, per Vuk's no-GitHub rule of 2026-10-23).
+- Left open: 3-seed MoE vs dense neuron polysemanticity at widths 16/32/64 with llm.py (seed 0: MoE 5.0/4.4 skills per neuron vs dense 7.5/6.8). It only confirms 2510.23671 and 2604.02178, so it isn't a lab finding. It wasn't run because 7 other heavy python procs were running.
+- Dead ends (not for Vuk): Muon vs NS-off packing at convergence, the assoc-memory K sweep, MSIGN=fro in the LM, NS steps, and LM weight decay (1/wd shows up but is confounded by the undecayed embedding).
+
+## Scaling check (new rule 2026-10-24): does Muon weight decay's cost grow or shrink with width?
+Lab-use sentence: a lab researcher who reads this would change how they raise Muon weight decay for many-epoch runs if the safe wd depends on model width.
+Cause guess: wd caps every matrix's top singular value at ~1/wd. After RMSNorm the logits can still reach ~sqrt(width)/wd, so a wider model has more room and the cost of a given wd should SHRINK with width. If so, the effect is toy-scale and the direction gets dropped.
+Prediction: wloss(wd 1) - wloss(wd 0.1) is 0.28 at width 64 (measured), about 0.4 at 32 and about 0.15 at 128.
+Result (seed 0, 260 steps), wloss by width (wd 0.1 / 1 / 3): w32 3.062/3.305/3.813, w64 2.681/2.963/3.481, w128 2.370/2.718/3.343. Cost of wd 1 = 0.24/0.28/0.35; cost of wd 3 = 0.75/0.80/0.97. Prediction wrong: the cost GROWS with width. Top singular value of `up` is about 0.76/wd at every width.
+Next is the length check at 4x (1040 steps), wd 0/0.1/0.3/1 x widths 32/64/128, seed 0. Prediction: at 4x, wd 0.1-0.3 ties or beats wd 0, and the cost of wd 1 still grows with width.
+Result 4x (1040 steps, seed 0), wloss for wd 0 / 0.1 / 0.3 / 1:
+
+| width | wd 0 | wd 0.1 | wd 0.3 | wd 1 | best | cost of wd 1 vs best |
+|---|---|---|---|---|---|---|
+| 32 | 2.054 | 2.035 | 2.205 | 2.592 | 0.1 | 0.56 |
+| 64 | 1.453 | 1.332 | 1.655 | 2.266 | 0.1 | 0.93 |
+| 128 | 1.047 | 1.103 | 1.220 | 2.081 | 0 | 1.03 |
+
+The cost of a too-high wd grows with width (260 steps: 0.24/0.28/0.35; 1040 steps: 0.56/0.93/1.03), and the best wd drifts down at width 128. Top singular values sit near 0.7/wd at every width. With wd 0 they keep growing over training (up 4-5 at 1040 steps).
+Guess for 1B+ (a guess, not measured): the best Muon wd keeps shrinking with width.
+DROPPED: already published. 2512.05620 (matrix-preconditioned optimizers, Dec 2025) finds the best wd scales as 1/width, and 2605.11172 finds the best Muon wd falls with training length. Not new.
+DROPPED (scaling rule): the TMS weight-decay feature cap stays a toy-model statement. Its cause (unit-norm features with no normalization layer) is toy-only, and the LM shows the 1/wd cap without a feature-count reading.
+Superposition brief status: replication page written; MoE < dense polysemanticity is published (2510.23671, 2604.02178); Muon packing = NS-off packing (dead end). No open lab-useful superposition direction left from this brief.
