@@ -9,3 +9,5 @@ Toy: qkclip-batch model (2 layers, width 16, 20-task mix, 800 steps, Muon 0.95 N
 - Prediction single spike (x100 at step 400): Adam-only clip +0.02 vs clip-all.
 - Prediction MOM=0: Adam-only clip = clip-all (no momentum to carry the spike).
 - 2026-10-24 clip threshold far below usual norm (0.001, 0.1) = same as 0.2/0.5 within 0.01 in both toys (3 seeds); added to finding point 6.
+- 2026-10-24 prediction: low global clip does NOT stop no-QK-norm logit blow-up (Muon step size ignores grad size; growth comes from consistent q/k direction).
+  result: QKNORM=0 lr 0.014/0.028/0.042/0.056 seed 0, no clip 4.002/4.029/4.056/4.102, clip 0.2 4.003/4.032/4.067/4.106. Prediction held; clipping does not help blow-up. Dropped.

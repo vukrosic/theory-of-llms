@@ -58,3 +58,7 @@ Result 2: k/n varied: best EXP_MULT x1 at E16K2 (0.67 vs x0.5 0.82, x0.25 1.22, 
 ## Layout gap vs training length (2026-10-24)
 Prediction: each-vs-fused gap persists at 3x steps (1200): fused stays nearer dense.
 Result: NS=512, 1200 steps, seeds 0|1: dense 0.648|0.816 (86%|81%), each 0.446|0.476 (91%|90%), fused x0.5 0.785|0.644 (83%|86%), fused x1 1.149|0.796. Gap persists with 3x training when facts can't all be memorized (NS=256 at 1200 steps saturates at 100% for all). Added to finding.
+
+## Expert axis as reduction axis (MaxText #4798) (2026-10-24)
+Prediction: per-input-column [E, out] orthogonalization at best EXP_MULT is near dense or worse (like flat, 1.5-1.6).
+Result (NS=256, lr 0.02, seeds 0|1, same code version): eaxis x0.25 1.40|1.43, x0.5 1.24|1.36, x1 1.30|1.24 (69%|71%), x2 2.33|2.50, x4 4.00|4.15; each x1 0.837|0.827 (82%|83%); dense 1.377|1.338 (68%|69%). Prediction held. Added to finding.

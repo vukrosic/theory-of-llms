@@ -205,6 +205,8 @@ def train(lr, seed):
                     e, o_, i_ = u.shape; u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5
                     if MUON_EXP == "fusednorm":                              # same directions, but each expert's block rescaled to a per-expert Muon step's size
                         u = u / (u.norm(dim=(1, 2), keepdim=True) + 1e-7) * min(o_, i_) ** 0.5; sc = max(1, o_ / i_) ** 0.5
+                elif p.ndim == 3 and MUON_EXP == "eaxis":                    # MaxText issue 4798: expert axis as Muon's reduction axis -> per input column, one [E, out] matrix
+                    e, o_, i_ = u.shape; u = ns(u.permute(2, 0, 1)).permute(1, 2, 0); sc = max(1, e / o_) ** 0.5
                 elif p.ndim == 3 and MUON_EXP == "flat":                     # g.view(g.size(0), -1): each expert one row (Moonlight example code)
                     e, o_, i_ = u.shape; u = ns(u.reshape(e, o_ * i_)).view(e, o_, i_); sc = 1.0
                 else:
