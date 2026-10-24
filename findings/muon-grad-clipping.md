@@ -19,7 +19,7 @@ Muon's Newton-Schulz step throws away the size of the momentum, so people argue 
 
 3. Why: the orthogonalization sees the momentum, not one gradient. A gradient S× the usual one dominates the momentum for about ln(S)/(1−β) steps (90 steps for S=100, β=0.95), and every one of those steps is a full-size step in the bad batch's direction. With momentum off, Adam-only clipping and clipping everything give the same loss (4.0513 both), so the whole effect goes through momentum.
 
-4. It holds at width 32 with 8 heads (clean 3.881, clip all 3.882, Adam-only 4.017, normalize 3.891), with 4 layers (3.987 / 3.997 / 4.172 / 3.987) and with momentum 0.98 (4.020 / 4.027 / 4.172 / 4.031). One single 170× spike at step 400 of 800 costs +0.015 under Adam-only clipping and nothing with either fix.
+4. It holds at width 32 with 8 heads (clean 3.881, clip all 3.882, Adam-only 4.017, normalize 3.891), with 4 layers (3.987 / 3.997 / 4.172 / 3.987) with momentum 0.98 (4.020 / 4.027 / 4.172 / 4.031), and with 3× longer training, 2,400 steps (clean 3.895, clip everything at 0.2 3.897, at 1.0 3.897, Adam-only 3.989; seed 0). One single 170× spike at step 400 of 800 costs +0.015 under Adam-only clipping and nothing with either fix.
 
 5. It holds in a mixture-of-experts model (8 experts, top-2, 8 skills, 260 steps, a bad batch every 26 steps, 170×), mean of 3 seeds: no bad batches 2.683, clip everything at 0.5 (half the usual norm) 2.722, clip everything at 2 (1.8× the usual norm) 2.769, clip only the Adam group 3.275, Adam group clipped + each Muon gradient normalized 2.756, no clipping 5.12 (seed 0).
 
