@@ -29,6 +29,7 @@ LAZY = env("LAZY", 0)                              # experts with no tokens this
 LOADPOW = env("LOADPOW", 0.0)                      # per-expert Muon step x (expert's token share / fair share)^LOADPOW; 0 = off
 ROUTE = os.environ.get("ROUTE", "h")               # router input: h (normal: after attention), x0 (token embedding)
 EXP_MULT, ATT_MULT, ROUTER_MULT = env("EXP_MULT", 1.0), env("ATT_MULT", 1.0), env("ROUTER_MULT", 1.0)
+GU_FUSED = env("GU_FUSED", 0)                      # 1: SwiGLU gate and up orthogonalized as one stacked [2F, D] matrix (Megatron linear_fc1 storage), per expert for MoE
 MOM = env("MOM", 0.95); EXP_MOM = env("EXP_MOM", MOM)   # Muon momentum; EXP_MOM: momentum for expert matrices only (default = MOM)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get("FOUT", "runs.jsonl"))
 S0, R0, A0 = 0, NS, NS + NR; V = NS + NR + NA + 1  # token ranges: subjects, relations, answer words, one 'is' token (IS)
@@ -166,6 +167,9 @@ def train(lr, seed):
         if p.ndim >= 2 and "emb" not in n and "head" not in n and ("router" not in n or ROUTER_MUON):
             mats.append(p); mult[id(p)] = ROUTER_MULT if "router" in n else EXP_MULT if "moe" in n else ATT_MULT if any(f".{z}." in n for z in "qkvo") else 1.0
         else: rest.append(p); mult[id(p)] = EMB_MULT if ("emb" in n or "head" in n) else ROUTER_MULT if "router" in n else 1.0
+    gates = {}
+    for blk in m.blocks:
+        gw, uw = (blk.moe.gate.weight, blk.moe.up.weight) if blk.is_moe else (blk.gate.weight, blk.up.weight); gates[id(gw)] = uw
     buf = [torch.zeros_like(p) for p in mats]; e1 = [torch.zeros_like(p) for p in rest]; e2 = [torch.zeros_like(p) for p in rest]
     for i in range(STEPS):
         f = min(1.0, (i + 1) / WARM) * min(1.0, 2 * (1 - i / STEPS))
@@ -183,10 +187,16 @@ def train(lr, seed):
                     if blk.is_moe:
                         c = torch.bincount(blk.moe.top.flatten(), minlength=MOE).float(); w = (c / c.mean()).pow(LOADPOW)[:, None, None]
                         for q in (blk.moe.gate.weight, blk.moe.up.weight, blk.moe.down.weight): ls[id(q)] = w
+            pend = {}
             for p, bf in zip(mats, buf):
                 iz = idle.get(id(p)); old = bf[iz].clone() if iz is not None and LAZY == 1 else None
                 mo = EXP_MOM if p.ndim == 3 else MOM; bf.mul_(mo).add_(p.grad); u = p.grad + mo * bf
                 if old is not None: bf[iz] = old
+                if GU_FUSED and id(p) in gates: pend[id(gates[id(p)])] = (p, u); continue
+                if GU_FUSED and id(p) in pend:
+                    pg, ug = pend.pop(id(p)); r_, c_ = u.shape[-2], u.shape[-1]
+                    ug, u = ns(torch.cat([ug, u], -2)).split(r_, -2); sc = max(1, 2 * r_ / c_) ** 0.5
+                    pg.add_(ug, alpha=-lr * f * mult[id(pg)] * sc); p.add_(u, alpha=-lr * f * mult[id(p)] * sc); continue
                 if p.ndim == 3 and MUON_EXP == "stack":
                     e, o_, i_ = u.shape
                     if o_ > i_: u = ns(u.reshape(e * o_, i_)).view(e, o_, i_); sc = max(1, e * o_ / i_) ** 0.5      # gate/up: experts stacked by rows
@@ -213,7 +223,7 @@ def train(lr, seed):
 
 if __name__ == "__main__":
     lr, seed = float(sys.argv[1]), int(sys.argv[2]); t0 = time.time(); m = train(lr, seed); ev = evaluate(m)
-    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA", "MOM", "EXP_MOM"]
+    keys = ["MOE", "K", "D", "NL", "STEPS", "NS", "NR", "NA", "COPYW", "EF", "FF", "DENSE0", "ROUTER_MUON", "SCALE", "QKNORM", "KVH", "GENERIC", "LOADPOW", "LAZY", "MUON_EXP", "ROUTE", "EXP_MULT", "ATT_MULT", "ROUTER_MULT", "EMB_MULT", "B", "T", "DATA", "MOM", "EXP_MOM", "GU_FUSED"]
     cfg = {k.lower(): globals()[k] for k in keys}; cfg.update({k.lower(): os.environ[k] for k in os.environ if k.startswith("X_")})
     row = dict(cfg, lr=lr, seed=seed, sec=round(time.time() - t0, 1), peak=m.peak, **ev)
     open(OUT, "a").write(json.dumps(row) + "\n")

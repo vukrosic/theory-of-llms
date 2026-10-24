@@ -20,7 +20,9 @@ Expert weights are often stored as one tensor (8 experts × out × in, or fused 
 
 4. It holds when each expert sees 4× more tokens per step (batch 128 instead of 32, about 512 tokens per expert per step): dense 73% right (loss 1.14), each expert alone 89% (0.54), fused 78% (0.98), each at its best learning rate.
 
-5. It is not about how many tokens each expert got. Scaling each expert's step by its share of tokens (power 0.5, 1 or −0.5) changes nothing (0.79-0.84), because load balancing keeps the shares nearly equal anyway. Rescaling each expert's block of the fused update to the size of a per-expert step does not help either (1.24 / 1.34 vs 1.28 fused, seeds 0 / 1), so the step sizes are not the problem; the directions are. What the fused layout breaks is the per-expert whitening: a stacked matrix with 32 input columns has a rank-32 update in total, so the 8 experts split one set of directions between them instead of each getting its own full-rank update fitted to the tokens it sees.
+5. It holds with 3× longer training (1,200 steps, 4,096 facts, so the model cannot memorize them all), mean of 2 seeds: dense 83% right (loss 0.73), each expert alone 90% (0.46), fused 84% (0.71). The fused layout does not catch up with more training; it stays at dense level.
+
+6. It is not about how many tokens each expert got. Scaling each expert's step by its share of tokens (power 0.5, 1 or −0.5) changes nothing (0.79-0.84), because load balancing keeps the shares nearly equal anyway. Rescaling each expert's block of the fused update to the size of a per-expert step does not help either (1.24 / 1.34 vs 1.28 fused, seeds 0 / 1), so the step sizes are not the problem; the directions are. What the fused layout breaks is the per-expert whitening: a stacked matrix with 32 input columns has a rank-32 update in total, so the 8 experts split one set of directions between them instead of each getting its own full-rank update fitted to the tokens it sees.
 
 How to use this
 
@@ -43,6 +45,8 @@ Expert lr multiplier, seeds 0 | 1: each ×0.5 1.038 | 1.118, ×1 0.775 | 0.751, 
 Batch 128, 150 steps, 8 warmup steps (seeds 0 | 1 at lr 0.04): dense 1.049 | 1.234, each 0.502 | 0.572, fused ×1 0.936 | 1.028; seed 0: lr 0.028 dense 1.220, each 0.586; lr 0.08 dense 1.148, each 0.801, fused ×0.5 1.184, ×1 1.302; lr 0.04 fused ×0.5 1.178, ×2 1.562.
 
 32 experts top-8, expert hidden 11, lr 0.02, seeds 0 | 1: each 0.800 | 0.785; fused ×0.25 1.469 | 1.483, ×0.5 1.343 | 1.500, ×1 1.437 | 1.647.
+
+1,200 steps, 4,096 facts (NS=512), lr 0.02, seeds 0 | 1: dense 0.648 | 0.816, each 0.446 | 0.476, fused ×0.5 0.785 | 0.644, fused ×1 1.149 | 0.796. With 2,048 facts all layouts reach 100% at 1,200 steps.
 
 16 experts (same active size), seeds 0 | 1: each 0.533 | 0.501; fused ×0.25 1.355 | 1.271, ×0.5 1.229 | 1.365. Width 64, 4,096 facts, seed 0: dense 1.917, each 1.410, fused ×0.5 1.788, ×1 2.198.
 

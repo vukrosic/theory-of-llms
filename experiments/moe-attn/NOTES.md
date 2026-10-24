@@ -43,3 +43,18 @@ Reasoning: each expert sees only K/E of the tokens, so its gradient is noisier; 
 Prediction: E8K2 best expert momentum ≈0.98-0.99 (vs 0.95 for the rest), gain ≥0.05 facts loss; best momentum rises further at K/E = 1/8 and 1/16.
 Result (lr 0.02, seeds 0|1): expert momentum 0.8 0.68|0.73, 0.85 0.68|0.71, 0.9 0.75|0.81, 0.95 0.84|0.83, 0.98 1.02|1.14, 0.99 1.30|1.28; whole model 0.9: 0.55|0.64. Opposite of prediction, and lower momentum helps every matrix in this 400-step toy (short-run artifact), not experts specially. Dropped.
 - Router on Muon re-run (current code, lr 0.02, seeds 0|1): Adam 0.837|0.827, Muon x1 0.806|0.838, x0.25 0.862|0.943, x0.1 0.994|0.985. No harm at x1; the earlier 'worse' was an old code version. Megatron already sets use_muon=False on the router. Dropped.
+
+## Fused gate+up under Muon (2026-10-24)
+A lab researcher who reads this would change: split SwiGLU's fused linear_fc1 [gate|up] before Newton-Schulz (Megatron has muon_split_qkv for QKV but orthogonalizes linear_fc1 whole).
+Prediction: fused gate+up worse than separate in dense and per-expert MoE, facts loss +0.05 to +0.15 (shared input directions, like fused experts). Knob GU_FUSED=1.
+Result: no difference (dense NS=512 2 seeds x 3 lr, NS=256 1 seed x 4 lr; best fused = best separate within noise). Gate and up read the same input, so sharing input directions costs nothing, unlike fused experts. Dropped.
+
+## Expert lr vs expert count under Muon (2026-10-24)
+A lab researcher would change: whether to retune the expert lr when changing expert count/granularity under Muon.
+Prediction: best EXP_MULT stays ~1 for E8K2, E16K4, E32K8 (Muon step size ignores how many tokens an expert gets).
+Result 1: best EXP_MULT x1 at E16K4 (0.70 vs x0.5 0.86, x2 0.91) and E32K8 (0.79 vs 1.05, 0.99), 2 seeds; global lr best 0.02 for E8K2/E32K8, 0.02-0.028 dense. But k/n fixed at 0.25 there. Lit: Adam-side says lr falls with expert count (2502.05172), Skywork expert lr x sqrt(k/n), muP-MoE transfer breaks across granularity (2508.09752). Next: vary k/n (E16K2, E32K2).
+Result 2: k/n varied: best EXP_MULT x1 at E16K2 (0.67 vs x0.5 0.82, x0.25 1.22, x2 1.13) and E32K2 (0.46 vs x0.5 0.50, x0.25 0.94, x2 0.93). Skywork sqrt(k/n) expert lr would cost +0.5 at E32K2. Global lr E32K2: 0.01 0.517, 0.014 0.49, 0.02 0.46, 0.028 0.68 vs dense best 0.02-0.028 -> transfers within one grid step. Confirms the default (one lr for all Muon matrices); no lab is known to lower expert lr under Muon, so not a headline. 10 s/run at E32K2.
+
+## Layout gap vs training length (2026-10-24)
+Prediction: each-vs-fused gap persists at 3x steps (1200): fused stays nearer dense.
+Result: NS=512, 1200 steps, seeds 0|1: dense 0.648|0.816 (86%|81%), each 0.446|0.476 (91%|90%), fused x0.5 0.785|0.644 (83%|86%), fused x1 1.149|0.796. Gap persists with 3x training when facts can't all be memorized (NS=256 at 1200 steps saturates at 100% for all). Added to finding.
