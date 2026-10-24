@@ -25,6 +25,7 @@ What do small language models actually build inside when they learn? We open up 
 | Muon packs features the same way, and its weight decay sets how many fit | 5 dimensions hold 5 always-on features but 19 of 20 rare ones; weight decay 1 cuts 16 stored features to 7, weight decay 2 to 3 | [muon-superposition](findings/muon-superposition.md) |
 | A sparse autoencoder sees answers, not the clock | 46 of 64 latents each fire on one answer ("the answer is 29"), 0 are a clock; laid out in answer order, their decoder vectors show the 5 clock speeds | [sae-sees-answers-not-clocks](findings/sae-sees-answers-not-clocks.md) |
 | A transcoder keeps the inputs and drops the sum | with 4 of 64 latents active it rebuilds 98% of each number alone but 71% of the sum; accuracy 99% -> 72%; the loss grows with width (9% -> 21% from width 32 to 128) and a skip connection cuts it to under 5% | [transcoders-drop-the-sum](findings/transcoders-drop-the-sum.md) |
+| Fine-tuning on a few fixed tasks makes a model stop reading the prompt; 5% made-up-rule examples prevent it | after fine-tuning on 8 tasks, a new rule shown in the prompt is answered right 13% of the time (was 100%); with 5% made-up-rule sequences mixed in, 97%, and the 8 tasks stay at 99.8%; holds from 29k to 418k parameters and 1x to 16x fine-tuning | [fine-tuning-stops-prompt-reading](findings/fine-tuning-stops-prompt-reading.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 

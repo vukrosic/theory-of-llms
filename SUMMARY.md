@@ -16,6 +16,7 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [Experts split by skill](findings/experts-split-by-skill.md)
 
 ## How learning unfolds
+- [Fine-tuning on a few fixed tasks makes a model stop reading the prompt](findings/fine-tuning-stops-prompt-reading.md)
 - [Weight decay forces the clock](findings/weight-decay-forces-the-clock.md)
 - [Learning rate sets speed, not where the model ends up](findings/learning-rate-sets-speed.md)
 - [What changes Muon's best learning rate](findings/what-changes-muon-learning-rate.md)
