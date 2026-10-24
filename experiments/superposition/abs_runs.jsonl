@@ -1,0 +1,1 @@
+{"opt": "ns", "S": 0.99, "seed": 0, "lr": 0.02, "n": 100, "m": 40, "steps": 3000, "imp": 0.97, "loss": 0.05754, "stored": 45, "alive": 40, "feats_per_neuron": 2.74, "mono": 0.05, "erank1": 31.3, "sec": 11.93}
