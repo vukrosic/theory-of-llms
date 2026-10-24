@@ -22,3 +22,7 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [Repeating data with Muon needs much higher weight decay](findings/muon-weight-decay-epochs.md)
 - [With Muon, orthogonalize each MoE expert alone](findings/muon-moe-expert-layout.md)
 - [Keep gradient clipping on for Muon matrices, with a low threshold](findings/muon-grad-clipping.md)
+
+## What interpretability tools see
+- [A sparse autoencoder sees answers, not the clock](findings/sae-sees-answers-not-clocks.md)
+- [A transcoder keeps the inputs and drops the sum](findings/transcoders-drop-the-sum.md)
