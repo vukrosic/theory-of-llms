@@ -1,0 +1,10 @@
+{"setup": "2-layer MoE (8 experts, top-2), Muon lr 0.028, 260 steps; 128 two-token subjects x 2 relations; prompt [start, subject1, subject2, relation] -> object; 32 edits per spot per seed",
+ "spots": ["L0 first subject token", "L0 last subject token", "L0 relation token", "L1 relation token"],
+ "trace_mlp": {"0": [0.00, 0.01, 0.06, 0.14], "1": [0.00, 0.00, 0.09, 0.13], "2": [0.00, 0.00, 0.05, 0.11]},
+ "knockout_mlp_kept": {"0": [0.99, 0.99, 0.95, 0.87], "1": [1.00, 1.00, 0.93, 0.92], "2": [1.00, 1.00, 0.95, 0.92]},
+ "rome_works": {"0": [0.94, 0.91, 1.00, 1.00], "1": [0.91, 0.81, 1.00, 1.00], "2": [0.97, 0.97, 1.00, 1.00]},
+ "rome_changed": {"0": [24.8, 11.7, 3.0, 1.9], "1": [22.1, 10.7, 4.5, 2.0], "2": [51.1, 19.4, 3.9, 2.7]},
+ "rome_sibling": {"0": [0.50, 0.53, 0.03, 0.06], "1": [0.59, 0.53, 0.09, 0.06], "2": [0.75, 0.75, 0.03, 0.09]},
+ "raw_changed": {"0": [35.5, 14.8, 7.1, 6.5], "1": [null, 16.2, null, 3.7], "2": [null, 28.7, null, 4.8]},
+ "raw_sibling": {"0": [0.50, 0.53, 0.00, 0.16], "1": [null, 0.53, null, 0.03], "2": [null, 0.78, null, 0.12]},
+ "attn_L0_relation": {"trace": [0.56, null, null], "knockout_kept": [0.29, 0.15, 0.26]}}

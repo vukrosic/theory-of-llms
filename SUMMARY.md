@@ -7,6 +7,8 @@ The order of the findings lives only here. Files have no numbers, so they can be
 - [Counts on a line](findings/count-on-a-line.md)
 - [Counts bend from a line into corners, so one steering direction can't set them](findings/ordered-values-bend.md)
 - [Muon packs features the same way, and weight decay sets how many fit](findings/muon-superposition.md)
+- [An MLP edit works even where the fact is not stored](findings/mlp-edit-without-storage.md)
+- [Edit a fact at the last token, not at the subject](findings/edit-the-last-token.md)
 
 ## How it moves information
 - [The two-head copy machine](findings/copy-heads.md)
