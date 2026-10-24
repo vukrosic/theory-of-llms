@@ -24,18 +24,19 @@ def head(m, r):                                            # answer scores from 
     return m.head(m.norm(r))
 
 
-def train(X, n, k, seed, steps, l1=3e-3, Y=None):          # Y given: a transcoder (read X, write Y), else an SAE (Y = X)
+def train(X, n, k, seed, steps, l1=3e-3, Y=None, skip=False):   # Y given: a transcoder (read X, write Y), else an SAE (Y = X); skip: + linear X -> Y path (skip transcoder)
     torch.manual_seed(seed); d = X.shape[1]; tc = Y is not None; Y = X if Y is None else Y
     Wd = F.normalize(torch.randn(Y.shape[1], n), dim=0); We = (Wd.T.clone() if not tc else F.normalize(torch.randn(n, d), dim=1)).requires_grad_()
     Wd = Wd.requires_grad_(); be = torch.zeros(n, requires_grad=True); bd = Y.mean(0).clone().requires_grad_()
-    bi = X.mean(0) if tc else None
-    opt = torch.optim.Adam([We, Wd, be, bd], lr=float(os.environ.get("SAE_LR", 3e-3)))
+    bi = X.mean(0) if tc else None; Ws = torch.zeros(Y.shape[1], d, requires_grad=True)
+    opt = torch.optim.Adam([We, Wd, be, bd] + ([Ws] if skip else []), lr=float(os.environ.get("SAE_LR", 3e-3)))
     enc = lambda X_: encode(X_, We, be, bi if tc else bd, k)
     for i in range(steps):
-        Z = enc(X); R = Z @ Wd.T + bd; loss = (R - Y).pow(2).sum(1).mean()
+        Z = enc(X); R = Z @ Wd.T + bd + ((X - bi) @ Ws.T if skip else 0); loss = (R - Y).pow(2).sum(1).mean()
         if k == 0: loss = loss + l1 * Z.sum(1).mean() * X.pow(2).sum(1).mean().sqrt()
         opt.zero_grad(); loss.backward(); opt.step()
         with torch.no_grad(): Wd.data = F.normalize(Wd.data, dim=0)
+    if tc and skip: return We.detach(), be.detach(), Wd.detach(), bd.detach(), bi, Ws.detach()
     if tc: return We.detach(), be.detach(), Wd.detach(), bd.detach(), bi
     return We.detach(), be.detach(), Wd.detach(), bd.detach()
 

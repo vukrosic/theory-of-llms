@@ -68,3 +68,34 @@ Run 13 (transcoder k sweep, 3 models): answer part kept k=1: 0.38-0.40, k=2: 0.4
 Models: `cd ../clock-addition && P=47 FRAC=0.6 EMB_WD=1 python3 mod.py SEED 300 0.03 1.0` for SEED 0, 1, 2 (runs/muon_SEED_0.03_1.0.pt).
 Then `P=47 python3 sae.py runs/muon_0_0.03_1.0.pt res 64 4 0`, `ablate.py`, `geometry.py`, `stability.py`, `transcoder.py MODEL 64 K 0`,
 `fig.py RUNS_DIR`. sae_runs/ holds the trained SAEs (not committed).
+
+## Scaling check (2026-10-24, new rule in muon/AGENTS.md)
+Sizes: width D = 32 / 64 / 128 with FF = 2D (hidden matrices 16x from smallest to largest); lengths 300 / 1200 / 4800 steps at D=64.
+Prediction S1: all grok at lr 0.03 (test > 0.9) by 300 steps except maybe D=32; both effects keep their size at every width and length.
+Training result: D=32 needed 500 steps (300 left seed 2 at 0.77), D=128 needed 600 steps at lr 0.03 (lr 0.05 / 300 steps left seed 1 at 0.89); all 15 models end at test 0.98-1.00.
+Prediction S2 (before scale.py): one-answer latents stay ~30-49 of 64 and clock latents 0 at every width and length; geometry finds >=4/5 clocks;
+own-answer break >0.6, other <0.01; transcoder k=4 rebuilds the sum part <0.9 while the alone part >0.95. Longer training may sharpen clocks, so the sum part may be easier (risk for B).
+Run S2a (raw activations): fine at 300 steps, but 2 of 3 models at 4800 steps gave a dead SAE (23-27 of 64 alive, 0 one-answer latents, transcoder rebuilds 7-13%).
+Cause: weight decay shrinks the residual ~50x over long training (mean norm 0.6 -> 0.01) and the SAE's fixed Adam lr can't follow. Fix in scale.py: scale activations to unit mean norm (Anthropic does this too); rerun all 15.
+Run S2b (normalised, 15 models): A holds everywhere; B's gap grows with width (D=32 0.08, D=64 0.19, D=128 0.58) but every run used 64 transcoder latents.
+Prediction S3: with latents scaled to width (32/64/128 for D=32/64/128) the D=128 gap shrinks but stays > the D=32 gap; the sum part needs more directions in wider models (rank90 grows with D).
+Run S3: prediction right. Latents scaled to width, k=4: gap (alone - sum rebuilt) 0.09 / 0.19 / 0.39 at D=32/64/128; sum part rank90 7-11 / 11-12 / 24; accuracy lost 0.02-0.16 / 0.07-0.29 / 0.18-0.26. k=8 at D=128: gap 0.15, lost 0.01-0.04.
+Prediction S4: a skip transcoder (2501.18823, linear path in parallel) frees latents from the each-alone part, so at D=128 k=4 the sum part rises from ~0.6 to >0.8 and lost falls below 0.1.
+Run S4: prediction right. Skip transcoder at k=4, latents = width: sum part 0.92-0.98 / 0.93-0.97 / 0.79-0.85 at D=32/64/128 (plain 0.83-0.91 / 0.66-0.87 / 0.57-0.65);
+accuracy lost 0.005-0.05 / 0.007-0.03 / 0.03-0.05 (plain 0.02-0.16 / 0.07-0.29 / 0.18-0.26). D=64 lengths with skip: lost 0.03-0.04 at 1200, 0.045-0.063 at 4800 (plain 0.07-0.10 at both).
+
+### Per-size and per-length table (3 models each, SAE/transcoder seed 0, activations normalised; scale_runs.jsonl)
+| model | params ratio | one-answer latents (of 64) | clock latents | clocks from decoder layout | own answer / other breaks | plain tc: alone - sum gap | plain tc lost | skip tc lost |
+|---|---|---|---|---|---|---|---|---|
+| D=32, 500 steps | 1x | 23, 31, 44 | 0, 0, 1 | 4, 5, 4 /5 | 0.50-0.86 / 0.0000 | 0.07-0.10 | 0.02-0.16 | 0.005-0.05 |
+| D=64, 300 steps | 4x | 49, 27, 22 | 0, 0, 0 | 5, 5, 5 /5 | 0.68-0.80 / <=0.0005 | 0.10-0.33 | 0.07-0.29 | 0.007-0.03 |
+| D=128, 600 steps | 16x | 33, 35, 54 | 0, 0, 0 | 4, 4, 4 /5 | 0.66-0.76 / <=0.0001 | 0.33-0.43 | 0.18-0.26 | 0.03-0.05 |
+| D=64, 1200 steps | 4x length | 33, 42, 37 | 0, 0, 0 | 4, 3, 5 /5 | 0.66-0.68 / 0.0000 | 0.13-0.18 | 0.07-0.10 | 0.03-0.04 |
+| D=64, 4800 steps | 16x length | 41, 43, 43 | 0, 0, 0 | 5, 4, 4 /5 | 0.66-0.87 / 0.0000 | 0.08-0.20 | 0.07-0.10 | 0.045-0.063 |
+(D=128 transcoder: 128 latents; D=32: 32 latents. Hidden-matrix params 16x from D=32 to D=128.)
+
+Check 1 (size): A holds at all 3 widths. B grows with width: gap 0.09 -> 0.19 -> 0.39 mean, accuracy lost 0.09 -> 0.18 -> 0.21 mean; the skip fix holds at all widths.
+Check 2 (length): A holds 1x/4x/16x. B's gap stays ~0.15 from 1200 to 4800 steps (0.19 at 300); accuracy lost drops 0.18 -> 0.09 -> 0.08 from 300 to 1200 then holds.
+Check 3 (cause, not toy-only): A: latents are nonnegative and sparse, so a circular feature is tiled by one latent per point (Gurnee et al. 2026 see the same tiling of a helix in Claude 3.5 Haiku). B: the computed part (a+b) spans more directions as the model widens (rank90 7-11 -> 11-12 -> 24) while k stays fixed, and the plain transcoder spends latents on the easy linear pass-through; a skip path takes the linear part and frees the latents.
+Big-model evidence: Anthropic's CLTs: 11.5% reconstruction error at L0 88 on an 18-layer model, 21.7% at L0 235 on Haiku (error grows with size even at higher L0); skip transcoders (2501.18823) lower reconstruction loss on Pythia/Llama; Biology 2025 reads Haiku's addition as lookup-table features; Engels 2024 finds GPT-2/Mistral day/month circles only after clustering SAE latents.
+1B+ guess (a guess, untested): A gets stronger (more latents per manifold, each a single point); B: a plain transcoder at fixed L0 loses a larger share of the MLP's computed part as width grows, and a skip connection recovers most of it.

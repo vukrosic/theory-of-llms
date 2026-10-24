@@ -98,6 +98,6 @@ if __name__ == "__main__":
     print(f"{OPT} seed {seed} lr {lr} wd {wd} {dt:.1f}s  grok(test>=0.95) at {grok}  final train {log[-1][1]} test {log[-1][2]}")
     print("  " + " ".join(f"{i}:{a}/{b}" for i, a, b in log[:: max(1, len(log) // 12)]))
     os.makedirs(os.path.join(os.path.dirname(__file__) or ".", "runs"), exist_ok=True)
-    torch.save(m.state_dict(), os.path.join(os.path.dirname(__file__) or ".", "runs", f"{OPT}_{seed}_{lr}_{wd}.pt"))
+    torch.save(m.state_dict(), os.path.join(os.path.dirname(__file__) or ".", "runs", f"{OPT}_{seed}_{lr}_{wd}{os.environ.get('TAG', '')}.pt"))   # TAG: optional name suffix
     with open(os.path.join(os.path.dirname(__file__) or ".", "runs.jsonl"), "a") as fh:
-        fh.write(json.dumps(dict(opt=OPT, P=P, frac=FRAC, seed=seed, steps=steps, lr=lr, wd=wd, grok=grok, log=log, sec=round(dt, 1))) + "\n")
+        fh.write(json.dumps(dict(tag=os.environ.get("TAG", ""), D=D, opt=OPT, P=P, frac=FRAC, seed=seed, steps=steps, lr=lr, wd=wd, grok=grok, log=log, sec=round(dt, 1))) + "\n")

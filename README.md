@@ -23,7 +23,7 @@ What do small language models actually build inside when they learn? We open up 
 | Keep gradient clipping on for Muon matrices, with a low threshold | clipping only the Adam group under bad batches: loss 4.158; clipping everything at 1.0: 4.037; at half the usual gradient norm: 4.026 (clean 4.029) | [muon-grad-clipping](findings/muon-grad-clipping.md) |
 | Muon packs features the same way, and its weight decay sets how many fit | 5 dimensions hold 5 always-on features but 19 of 20 rare ones; weight decay 1 cuts 16 stored features to 7, weight decay 2 to 3 | [muon-superposition](findings/muon-superposition.md) |
 | A sparse autoencoder sees answers, not the clock | 46 of 64 latents each fire on one answer ("the answer is 29"), 0 are a clock; laid out in answer order, their decoder vectors show the 5 clock speeds | [sae-sees-answers-not-clocks](findings/sae-sees-answers-not-clocks.md) |
-| A transcoder keeps the inputs and drops the sum | with 4 of 64 latents active it rebuilds 98% of each number alone but 71% of the sum; accuracy 99% -> 72% | [transcoders-drop-the-sum](findings/transcoders-drop-the-sum.md) |
+| A transcoder keeps the inputs and drops the sum | with 4 of 64 latents active it rebuilds 98% of each number alone but 71% of the sum; accuracy 99% -> 72%; the loss grows with width (9% -> 21% from width 32 to 128) and a skip connection cuts it to under 5% | [transcoders-drop-the-sum](findings/transcoders-drop-the-sum.md) |
 
 ![A noisy neuron becomes one smooth hill when numbers are put in the model's own order](figures/reorder.png)
 

@@ -1,0 +1,15 @@
+{"model": "muon_0_0.03_1.0_d32.pt", "D": 32, "seed": 0, "model_acc": 1.0, "one": 22, "alive": 62, "clocks": 0, "geo": 4, "own": 0.511, "other": 0.0, "tc_alone": 0.975, "tc_sum": 0.906, "tc_lost": 0.021}
+{"model": "muon_2_0.03_1.0_d32.pt", "D": 32, "seed": 0, "model_acc": 0.9982, "one": 38, "alive": 63, "clocks": 0, "geo": 4, "own": 0.818, "other": 0.0, "tc_alone": 0.933, "tc_sum": 0.831, "tc_lost": 0.176}
+{"model": "muon_1_0.03_1.0_d32.pt", "D": 32, "seed": 0, "model_acc": 0.9991, "one": 26, "alive": 64, "clocks": 0, "geo": 4, "own": 0.661, "other": 0.0001, "tc_alone": 0.947, "tc_sum": 0.839, "tc_lost": 0.116}
+{"model": "muon_1_0.03_1.0_s4800.pt", "D": 64, "seed": 0, "model_acc": 0.9982, "one": 0, "alive": 23, "clocks": 1, "geo": 0, "own": 0.0, "other": 0.0, "tc_alone": 0.129, "tc_sum": 0.067, "tc_lost": 0.881}
+{"model": "muon_2_0.03_1.0_s4800.pt", "D": 64, "seed": 0, "model_acc": 0.995, "one": 0, "alive": 27, "clocks": 0, "geo": 1, "own": 0.0, "other": 0.0, "tc_alone": 0.074, "tc_sum": 0.03, "tc_lost": 0.909}
+{"model": "muon_0_0.03_1.0_s1200.pt", "D": 64, "seed": 0, "model_acc": 0.9995, "one": 15, "alive": 53, "clocks": 0, "geo": 5, "own": 0.991, "other": 0.0, "tc_alone": 0.666, "tc_sum": 0.413, "tc_lost": 0.555}
+{"model": "muon_0_0.03_1.0_s4800.pt", "D": 64, "seed": 0, "model_acc": 0.995, "one": 32, "alive": 56, "clocks": 0, "geo": 4, "own": 0.79, "other": 0.0, "tc_alone": 0.804, "tc_sum": 0.536, "tc_lost": 0.407}
+{"model": "muon_2_0.03_1.0_s1200.pt", "D": 64, "seed": 0, "model_acc": 0.9968, "one": 29, "alive": 56, "clocks": 0, "geo": 4, "own": 0.818, "other": 0.0, "tc_alone": 0.738, "tc_sum": 0.526, "tc_lost": 0.445}
+{"model": "muon_1_0.03_1.0_s1200.pt", "D": 64, "seed": 0, "model_acc": 0.9964, "one": 42, "alive": 57, "clocks": 0, "geo": 4, "own": 0.847, "other": 0.0, "tc_alone": 0.765, "tc_sum": 0.568, "tc_lost": 0.392}
+{"model": "muon_1_0.03_1.0.pt", "D": 64, "seed": 0, "model_acc": 0.9968, "one": 32, "alive": 64, "clocks": 0, "geo": 5, "own": 0.665, "other": 0.0, "tc_alone": 0.967, "tc_sum": 0.885, "tc_lost": 0.067}
+{"model": "muon_2_0.03_1.0.pt", "D": 64, "seed": 0, "model_acc": 0.928, "one": 23, "alive": 64, "clocks": 0, "geo": 4, "own": 0.794, "other": 0.0004, "tc_alone": 0.956, "tc_sum": 0.831, "tc_lost": 0.158}
+{"model": "muon_0_0.03_1.0.pt", "D": 64, "seed": 0, "model_acc": 0.9905, "one": 46, "alive": 64, "clocks": 0, "geo": 5, "own": 0.819, "other": 0.0, "tc_alone": 0.978, "tc_sum": 0.711, "tc_lost": 0.272}
+{"model": "muon_0_0.03_1.0_d128.pt", "D": 128, "seed": 0, "model_acc": 0.9982, "one": 34, "alive": 64, "clocks": 0, "geo": 4, "own": 0.752, "other": 0.0, "tc_alone": 0.999, "tc_sum": 0.348, "tc_lost": 0.473}
+{"model": "muon_2_0.03_1.0_d128.pt", "D": 128, "seed": 0, "model_acc": 0.9919, "one": 54, "alive": 64, "clocks": 0, "geo": 5, "own": 0.721, "other": 0.0001, "tc_alone": 0.941, "tc_sum": 0.549, "tc_lost": 0.306}
+{"model": "muon_1_0.03_1.0_d128.pt", "D": 128, "seed": 0, "model_acc": 0.9982, "one": 42, "alive": 64, "clocks": 0, "geo": 4, "own": 0.743, "other": 0.0001, "tc_alone": 0.998, "tc_sum": 0.358, "tc_lost": 0.42}
